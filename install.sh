@@ -171,6 +171,7 @@ setup_env() {
 
     install -m 0640 -o root -g "$APP_USER" /dev/null "$ENV_FILE"
     cat > "$ENV_FILE" <<EOF
+PYTHONUTF8=1
 FLASK_ENV=production
 FLASK_SECRET_KEY=${secret}
 DATABASE_URL=postgresql://${APP_USER}:${db_pass}@localhost:5432/${APP_USER}
@@ -218,7 +219,7 @@ setup_postgres() {
     fi
 
     if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${APP_USER}'" | grep -q 1; then
-        sudo -u postgres createdb -O "$APP_USER" "$APP_USER"
+        sudo -u postgres createdb -O "$APP_USER" --encoding=UTF8 --lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --template=template0 "$APP_USER"
         log_ok "Created database ${APP_USER}."
     else
         log_info "Database ${APP_USER} already exists."

@@ -31,7 +31,10 @@ class BaseConfig:
         "DATABASE_URL", "postgresql://flatfinder:flatfinder@localhost:5432/flatfinder"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "connect_args": {"client_encoding": "utf8"},
+    }
 
     REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
