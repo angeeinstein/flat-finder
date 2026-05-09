@@ -183,8 +183,8 @@ MAX_IMPORT_DOWNLOAD_SIZE_MB=20
 MAX_IMAGE_DOWNLOAD_SIZE_MB=10
 ROUTING_PROVIDER=mock
 GEOCODING_PROVIDER=nominatim
-NOMINATIM_USER_AGENT=flat-finder/1.0 (admin@${domain})
-LOGIN_RATE_LIMIT=10 per minute
+NOMINATIM_USER_AGENT="flat-finder/1.0 (admin@${domain})"
+LOGIN_RATE_LIMIT="10 per minute"
 LOG_LEVEL=INFO
 DEFAULT_SCORE_DISPLAY=both
 EOF
@@ -579,6 +579,9 @@ EOF
 main() {
     require_root
     detect_os
+    # When invoked via "curl | bash" stdin is the pipe, not the terminal.
+    # Reopen it from /dev/tty so every read prompt works correctly.
+    exec < /dev/tty
 
     if [[ -d "$INSTALL_DIR/.git" ]]; then
         # called from update_self with --updated → always run update
