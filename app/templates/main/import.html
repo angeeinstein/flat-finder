@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_macros.html" import render_field %}
+
+{% block title %}Import URL · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-7">
+    <h1 class="h4 mb-3"><i class="bi bi-link-45deg"></i> Import listing URL</h1>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <p class="text-muted small">Paste one or more apartment listing URLs (e.g. willhaben.at). Each URL becomes a background import job.</p>
+        <form method="post" novalidate>
+          {{ form.hidden_tag() }}
+          {{ render_field(form.urls) }}
+          <button type="submit" class="btn btn-primary">{{ form.submit.label.text }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <h2 class="h5 mt-4 mt-lg-0">Recent jobs</h2>
+    {% if not recent_jobs %}
+      <p class="text-muted small">No jobs yet.</p>
+    {% else %}
+      <div class="list-group">
+        {% for job in recent_jobs %}
+        <a href="{{ url_for('main.job_status', job_id=job.id) }}" class="list-group-item list-group-item-action">
+          <div class="d-flex justify-content-between">
+            <div class="text-truncate" style="max-width:60%;">{{ job.url }}</div>
+            <span class="badge bg-{% if job.status.value == 'done' %}success{% elif job.status.value == 'failed' %}danger{% elif job.status.value == 'running' %}info{% else %}secondary{% endif %}">{{ job.status.value }}</span>
+          </div>
+          <div class="small text-muted">{{ job.created_at.strftime('%Y-%m-%d %H:%M') }}{% if job.error_message %} · {{ job.error_message[:80] }}{% endif %}</div>
+        </a>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

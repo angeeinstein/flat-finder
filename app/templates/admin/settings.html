@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}App settings · admin{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">Application settings</h1>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <form method="post" action="{{ url_for('admin.settings_save') }}" class="row g-2 align-items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="col-md-3"><label class="form-label small">Key</label><input class="form-control" name="key" required></div>
+      <div class="col-md-5"><label class="form-label small">Value</label><input class="form-control" name="value"></div>
+      <div class="col-md-3"><label class="form-label small">Description</label><input class="form-control" name="description"></div>
+      <div class="col-md-1 d-grid"><button class="btn btn-primary">Save</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead class="table-light"><tr><th>Key</th><th>Value</th><th>Description</th><th>Updated</th></tr></thead>
+      <tbody>
+      {% for s in items %}
+        <tr>
+          <td><strong>{{ s.key }}</strong></td>
+          <td class="small">{{ s.value }}</td>
+          <td class="small text-muted">{{ s.description or '' }}</td>
+          <td class="small text-muted">{{ s.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

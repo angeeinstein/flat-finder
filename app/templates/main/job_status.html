@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Import job #{{ job.id }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">Import job #{{ job.id }}</h1>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <div><strong>URL:</strong> <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer">{{ job.url }}</a></div>
+    <div><strong>Status:</strong> <span id="job-status" class="badge bg-{% if job.status.value == 'done' %}success{% elif job.status.value == 'failed' %}danger{% elif job.status.value == 'running' %}info{% else %}secondary{% endif %}">{{ job.status.value }}</span></div>
+    <div class="small text-muted mt-2"><strong>Started:</strong> {{ job.started_at.strftime('%Y-%m-%d %H:%M:%S') if job.started_at else '–' }}</div>
+    <div class="small text-muted"><strong>Finished:</strong> {{ job.finished_at.strftime('%Y-%m-%d %H:%M:%S') if job.finished_at else '–' }}</div>
+    {% if job.error_message %}
+      <div class="alert alert-danger mt-3"><strong>Error:</strong> {{ job.error_message }}</div>
+    {% endif %}
+    {% if job.apartment_id %}
+      <a id="apt-link" href="{{ url_for('apartments.detail', apt_id=job.apartment_id) }}" class="btn btn-primary mt-3">Open apartment</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function poll() {
+  if (['done','failed'].includes(document.getElementById('job-status').textContent.trim())) return;
+  setTimeout(async () => {
+    try {
+      const data = await flatFinder.api({{ url_for('api.job_status', job_id=job.id)|tojson }});
+      const badge = document.getElementById('job-status');
+      badge.textContent = data.status;
+      badge.className = 'badge bg-' + ({'done':'success','failed':'danger','running':'info'}[data.status] || 'secondary');
+      if (data.status === 'done' && data.apartment_url) {
+        location.reload();
+      } else if (data.status === 'failed') {
+        location.reload();
+      } else {
+        poll();
+      }
+    } catch (e) { setTimeout(poll, 4000); }
+  }, 2500);
+})();
+</script>
+{% endblock %}

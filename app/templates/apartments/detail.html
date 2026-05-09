@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+{% from "_macros.html" import score_badge, status_badge, warning_badges %}
+
+{% block title %}{{ apt.title or 'Apartment #' ~ apt.id }} · {{ app_name }}{% endblock %}
+
+{% block head_extra %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">{{ apt.title or 'Apartment #' ~ apt.id }}</h1>
+  <div>
+    <a href="{{ url_for('apartments.edit', apt_id=apt.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i> Edit</a>
+    <form action="{{ url_for('apartments.refresh', apt_id=apt.id) }}" method="post" class="d-inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+    </form>
+    <a href="{{ url_for('apartments.history', apt_id=apt.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-clock-history"></i> History</a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <!-- Gallery -->
+    {% if apt.images %}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="row g-2 m-0 p-2">
+          {% for img in apt.images[:8] %}
+            <div class="col-6 col-md-3"><img class="gallery-thumb" src="{{ url_for('api.image_thumbnail', image_id=img.id) }}" alt=""></div>
+          {% endfor %}
+        </div>
+        {% if apt.images|length > 8 %}
+          <div class="card-body pt-0"><a href="{{ url_for('apartments.gallery', apt_id=apt.id) }}">See all {{ apt.images|length }} photos</a></div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <!-- Description / fields -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 mb-2">
+          {{ status_badge(user_status.status if user_status else None) }}
+          {{ warning_badges(apt.warning_flags) }}
+          {% if apt.is_offline %}<span class="badge bg-secondary">offline</span>{% endif %}
+          {% if apt.is_duplicate_of_id %}<span class="badge bg-warning text-dark"><i class="bi bi-files"></i> duplicate of #{{ apt.is_duplicate_of_id }}</span>{% endif %}
+          {% for tag in apt.tags %}
+            <span class="badge" style="background:{{ tag.color or '#6c757d' }}">{{ tag.name }}
+              <a href="#" class="text-white ms-1 remove-tag" data-tag-id="{{ tag.id }}">&times;</a>
+            </span>
+          {% endfor %}
+        </div>
+        {% if apt.description %}<p>{{ apt.description }}</p>{% endif %}
+
+        <table class="table table-sm">
+          <tbody>
+            <tr><th>Address</th><td>{{ apt.address or '–' }}{% if apt.address_is_approximate %} <span class="badge bg-warning-subtle text-warning-emphasis">approximate</span>{% endif %}</td></tr>
+            <tr><th>City / postal</th><td>{{ apt.city or '–' }} {{ apt.postal_code or '' }} {{ apt.country or '' }}</td></tr>
+            <tr><th>Rent</th><td>{{ '€%.2f'|format(apt.price) if apt.price else '–' }}</td></tr>
+            <tr><th>Operating costs</th><td>{{ '€%.2f'|format(apt.operating_costs) if apt.operating_costs else '–' }}</td></tr>
+            <tr><th>Total monthly</th><td><strong>{{ '€%.2f'|format(apt.computed_total_monthly_cost) if apt.computed_total_monthly_cost else '–' }}</strong></td></tr>
+            <tr><th>€ / m²</th><td>{{ '€%.2f'|format(apt.cost_per_m2) if apt.cost_per_m2 else '–' }}</td></tr>
+            <tr><th>Deposit</th><td>{{ '€%.2f'|format(apt.deposit) if apt.deposit else '–' }}{% if apt.deposit_in_months %} ({{ apt.deposit_in_months }} months){% endif %}</td></tr>
+            <tr><th>Commission</th><td>{{ '€%.2f'|format(apt.commission) if apt.commission else '–' }}</td></tr>
+            <tr><th>Estimated yearly</th><td>{{ '€%.0f'|format(apt.estimated_yearly_cost) if apt.estimated_yearly_cost else '–' }}</td></tr>
+            <tr><th>First month total</th><td>{{ '€%.0f'|format(apt.estimated_first_month_cost) if apt.estimated_first_month_cost else '–' }}</td></tr>
+            <tr><th>Living area</th><td>{{ '%.1f m²'|format(apt.living_area_m2) if apt.living_area_m2 else '–' }}</td></tr>
+            <tr><th>Rooms</th><td>{{ apt.rooms or '–' }}</td></tr>
+            <tr><th>Floor</th><td>{{ apt.floor or '–' }}</td></tr>
+            <tr><th>Building / heating</th><td>{{ apt.building_type or '–' }}{% if apt.heating_type %} · {{ apt.heating_type }}{% endif %}</td></tr>
+            <tr><th>Energy</th><td>{{ apt.energy_cert_info or '–' }}</td></tr>
+            <tr><th>Amenities</th><td>
+              {% for label, value in [('Balcony', apt.has_balcony),('Terrace',apt.has_terrace),('Garden',apt.has_garden),('Parking',apt.has_parking),('Cellar',apt.has_cellar),('Furnished',apt.is_furnished)] %}
+                {% if value %}<span class="badge bg-success-subtle text-success-emphasis me-1">{{ label }}</span>{% endif %}
+              {% endfor %}
+            </td></tr>
+            <tr><th>Available</th><td>{{ apt.available_from.strftime('%Y-%m-%d') if apt.available_from else '–' }}{% if apt.lease_duration_limited %} (limited){% endif %}</td></tr>
+            <tr><th>Contact</th><td>{{ apt.contact_name or '–' }}{% if apt.contact_info %} · {{ apt.contact_info }}{% endif %}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Rating -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Your rating
+          <span class="float-end">Personal: {{ score_badge(personal_score) }} · Avg: {{ score_badge(avg_score) }}</span>
+        </h2>
+        <div id="rating-list">
+          {% for entry in breakdown %}
+            {% set existing = my_ratings.get(entry.category_id) %}
+            <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+              <div>
+                <div><strong>{{ entry.name }}</strong> <span class="text-muted small">w={{ entry.weight }}</span></div>
+                <small class="text-muted">{{ existing.comment if existing and existing.comment else '' }}</small>
+              </div>
+              <div class="d-flex align-items-center">
+                <input type="range" min="0" max="10" step="0.5" class="form-range rating-slider me-3" style="width:160px"
+                       value="{{ existing.score if existing else 5 }}" data-cat="{{ entry.category_id }}" data-apt="{{ apt.id }}">
+                <span class="rating-value badge bg-secondary" data-cat="{{ entry.category_id }}">{{ existing.score if existing else '–' }}</span>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h2 class="h5">Your notes</h2>
+        <form method="post" action="{{ url_for('apartments.add_note_form', apt_id=apt.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <textarea name="content" class="form-control mb-2" rows="3" placeholder="Add a note…"></textarea>
+          <button class="btn btn-sm btn-outline-primary">Add note</button>
+        </form>
+        {% for note in notes %}
+        <div class="border-start border-3 ps-3 mt-3">
+          <div class="small text-muted">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+          <div>{{ note.content }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Change history -->
+    {% if changes %}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h2 class="h5">Change history</h2>
+        <ul class="list-unstyled mb-0">
+          {% for c in changes[:10] %}
+          <li class="small mb-1">
+            <span class="text-muted">{{ c.changed_at.strftime('%Y-%m-%d %H:%M') }}</span>
+            <strong>{{ c.field_name }}</strong>
+            <span class="text-muted">{{ (c.old_value or '–')[:40] }}</span>
+            → <span>{{ (c.new_value or '–')[:40] }}</span>
+            <span class="text-muted">({{ c.detected_by }})</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-4">
+    <!-- Status selector -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h2 class="h6">Status</h2>
+        <select class="form-select" id="status-select" data-apt="{{ apt.id }}">
+          {% for s in StatusEnum %}
+            <option value="{{ s.value }}" {{ 'selected' if user_status and user_status.status == s }}>{{ s.value.replace('_',' ').title() }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <!-- Map -->
+    {% if apt.lat and apt.lng %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div id="apt-map" style="height:300px; border-radius:10px"></div>
+    </div>
+    {% endif %}
+
+    <!-- Travel times -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <h2 class="h6 mb-0">Travel times</h2>
+          <button id="recalc-tt" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-clockwise"></i></button>
+        </div>
+        <table class="table table-sm mt-2 mb-0">
+          <thead><tr><th>Target</th><th>Mode</th><th class="text-end">km</th><th class="text-end">min</th></tr></thead>
+          <tbody>
+          {% for tt in travel_times %}
+            <tr>
+              <td>{{ target_map[tt.target_id].name if tt.target_id in target_map else '?' }}</td>
+              <td><i class="bi bi-{{ {'walking':'person-walking','bicycle':'bicycle','car':'car-front','transit':'train-front'}[tt.mode.value] }}"></i> {{ tt.mode.value }}</td>
+              <td class="text-end">{{ '%.1f'|format(tt.distance_km) if tt.distance_km is not none else '–' }}</td>
+              <td class="text-end">{{ '%.0f'|format(tt.duration_min) if tt.duration_min is not none else '–' }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tags -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h2 class="h6">Add tag</h2>
+        <form id="add-tag-form" class="d-flex gap-2">
+          <input type="text" class="form-control form-control-sm" name="tag-name" placeholder="cheap, good location, …">
+          <button class="btn btn-sm btn-outline-primary" type="submit">Add</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Sources -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h2 class="h6">Sources</h2>
+        {% for src in apt.listing_sources %}
+        <div class="small mb-1">
+          <a href="{{ src.url }}" target="_blank" rel="noopener noreferrer">{{ src.platform or 'link' }} <i class="bi bi-box-arrow-up-right"></i></a>
+          {% if src.is_active %}<span class="badge bg-success-subtle text-success-emphasis">active</span>{% else %}<span class="badge bg-secondary-subtle text-muted">inactive</span>{% endif %}
+          {% if src.date_last_refreshed %}<div class="text-muted">refreshed: {{ src.date_last_refreshed.strftime('%Y-%m-%d') }}</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+{% if apt.lat and apt.lng %}
+(function () {
+  const map = L.map('apt-map').setView([{{ apt.lat }}, {{ apt.lng }}], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map);
+  L.marker([{{ apt.lat }}, {{ apt.lng }}]).addTo(map);
+})();
+{% endif %}
+
+// Rating sliders
+document.querySelectorAll('.rating-slider').forEach(slider => {
+  slider.addEventListener('change', async () => {
+    const aptId = slider.dataset.apt;
+    const catId = slider.dataset.cat;
+    const score = parseFloat(slider.value);
+    try {
+      const r = await flatFinder.api(`/api/apartments/${aptId}/rate`, {
+        method: 'POST', body: JSON.stringify({category_id: parseInt(catId), score: score})
+      });
+      document.querySelector(`.rating-value[data-cat="${catId}"]`).textContent = score;
+      flatFinder.showToast('Rating saved', 'success');
+    } catch (e) { flatFinder.showToast('Failed: ' + e.message, 'danger'); }
+  });
+});
+
+// Status
+document.getElementById('status-select')?.addEventListener('change', async (e) => {
+  const aptId = e.target.dataset.apt;
+  try {
+    await flatFinder.api(`/api/apartments/${aptId}/status`, {
+      method: 'POST', body: JSON.stringify({status: e.target.value})
+    });
+    flatFinder.showToast('Status saved', 'success');
+  } catch (err) { flatFinder.showToast(err.message, 'danger'); }
+});
+
+// Recalc travel time
+document.getElementById('recalc-tt')?.addEventListener('click', async () => {
+  try {
+    await flatFinder.api(`/api/travel-times/{{ apt.id }}/recalculate`, { method: 'POST' });
+    flatFinder.showToast('Recalculated, reloading…', 'success');
+    setTimeout(() => location.reload(), 600);
+  } catch (e) { flatFinder.showToast(e.message, 'danger'); }
+});
+
+// Add tag
+document.getElementById('add-tag-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = e.target.elements['tag-name'].value.trim();
+  if (!name) return;
+  try {
+    await flatFinder.api(`/api/apartments/{{ apt.id }}/tags`, {
+      method: 'POST', body: JSON.stringify({name})
+    });
+    location.reload();
+  } catch (err) { flatFinder.showToast(err.message, 'danger'); }
+});
+
+// Remove tag
+document.querySelectorAll('.remove-tag').forEach(a => {
+  a.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const tagId = a.dataset.tagId;
+    try {
+      await flatFinder.api(`/api/apartments/{{ apt.id }}/tags/${tagId}`, { method: 'DELETE' });
+      location.reload();
+    } catch (err) { flatFinder.showToast(err.message, 'danger'); }
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination %}
+{% block title %}Audit log · admin{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">Audit log</h1>
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead class="table-light">
+        <tr><th>When</th><th>User</th><th>Action</th><th>Target</th><th>IP</th><th>Details</th></tr>
+      </thead>
+      <tbody>
+      {% for e in entries %}
+        <tr>
+          <td class="small text-muted">{{ e.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          <td class="small">{{ e.user.username if e.user else '–' }}</td>
+          <td><strong>{{ e.action }}</strong></td>
+          <td class="small">{{ e.target_type or '' }}{% if e.target_id %} #{{ e.target_id }}{% endif %}</td>
+          <td class="small text-muted">{{ e.ip_address or '' }}</td>
+          <td class="small"><code>{{ e.details|tojson if e.details else '' }}</code></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{ pagination(page, total_pages, 'admin.audit_log') }}
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "_macros.html" import score_badge %}
+{% block title %}Compare apartments{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">Compare apartments</h1>
+
+<form method="get" class="row g-2 mb-4 align-items-end">
+  {% for slot in range(4) %}
+  <div class="col-md-3">
+    <label class="form-label small text-muted">Apartment {{ slot+1 }}</label>
+    <select name="ids[]" class="form-select form-select-sm">
+      <option value="">— none —</option>
+      {% for a in all_apartments %}
+        <option value="{{ a.id }}" {% if apartments|length > slot and apartments[slot].id == a.id %}selected{% endif %}>{{ a.title or 'Apartment #' ~ a.id }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endfor %}
+  <div class="col-md-12 mt-2">
+    <button class="btn btn-sm btn-primary" id="compare-go">Compare</button>
+    <a href="{{ url_for('apartments.compare') }}" class="btn btn-sm btn-link">Reset</a>
+  </div>
+</form>
+
+{% if apartments %}
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table compare-table align-top mb-0">
+      <thead><tr><th></th>{% for a in apartments %}<th><a href="{{ url_for('apartments.detail', apt_id=a.id) }}">{{ a.title or 'Apt #' ~ a.id }}</a></th>{% endfor %}</tr></thead>
+      <tbody>
+        <tr><th>Address</th>{% for a in apartments %}<td>{{ a.address or '–' }}</td>{% endfor %}</tr>
+        <tr><th>Price</th>{% for a in apartments %}<td>{{ '€%.0f'|format(a.price) if a.price else '–' }}</td>{% endfor %}</tr>
+        <tr><th>Total monthly</th>{% for a in apartments %}<td>{{ '€%.0f'|format(a.computed_total_monthly_cost) if a.computed_total_monthly_cost else '–' }}</td>{% endfor %}</tr>
+        <tr><th>€ / m²</th>{% for a in apartments %}<td>{{ '€%.1f'|format(a.cost_per_m2) if a.cost_per_m2 else '–' }}</td>{% endfor %}</tr>
+        <tr><th>Area</th>{% for a in apartments %}<td>{{ '%.0f m²'|format(a.living_area_m2) if a.living_area_m2 else '–' }}</td>{% endfor %}</tr>
+        <tr><th>Rooms</th>{% for a in apartments %}<td>{{ a.rooms or '–' }}</td>{% endfor %}</tr>
+        <tr><th>Personal score</th>{% for a in apartments %}<td>{{ score_badge(personal_scores.get(a.id)) }}</td>{% endfor %}</tr>
+        <tr><th>Average score</th>{% for a in apartments %}<td>{{ score_badge(avg_scores.get(a.id)) }}</td>{% endfor %}</tr>
+        <tr><th>Deposit</th>{% for a in apartments %}<td>{{ '€%.0f'|format(a.deposit) if a.deposit else '–' }}</td>{% endfor %}</tr>
+        <tr><th>Commission</th>{% for a in apartments %}<td>{{ '€%.0f'|format(a.commission) if a.commission else '–' }}</td>{% endfor %}</tr>
+
+        {% for cat in categories %}
+        <tr><th class="small text-muted">★ {{ cat.name }}</th>
+          {% for a in apartments %}
+            {% set rating = a.ratings | selectattr('category_id', 'equalto', cat.id) | first %}
+            <td>{{ rating.score if rating else '–' }}</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+
+        {% for t in targets %}
+          {% for mode in TravelMode %}
+          <tr><th class="small text-muted">{{ t.name }} ({{ mode.value }})</th>
+            {% for a in apartments %}
+              {% set tt = travel.get((a.id, t.id, mode.value)) %}
+              <td>{{ '%.0f min'|format(tt.duration_min) if tt and tt.duration_min is not none else '–' }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        {% endfor %}
+
+        <tr><th>Amenities</th>
+          {% for a in apartments %}
+          <td class="small">
+            {% for label, v in [('🪴 Balcony', a.has_balcony),('🌿 Terrace',a.has_terrace),('🌳 Garden',a.has_garden),('🚗 Parking',a.has_parking),('📦 Cellar',a.has_cellar),('🛋 Furnished',a.is_furnished)] %}
+              {% if v %}<div>{{ label }}</div>{% endif %}
+            {% endfor %}
+          </td>
+          {% endfor %}
+        </tr>
+        <tr><th>Sources</th>{% for a in apartments %}<td class="small">
+          {% for s in a.listing_sources %}<a href="{{ s.url }}" target="_blank">{{ s.platform or 'link' }}</a><br>{% endfor %}
+        </td>{% endfor %}</tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+  <p class="text-muted">Select up to four apartments to compare.</p>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('compare-go')?.addEventListener('click', function (e) {
+  e.preventDefault();
+  const ids = Array.from(document.querySelectorAll('select[name="ids[]"]'))
+    .map(s => s.value).filter(v => v);
+  const params = new URLSearchParams();
+  if (ids.length) params.set('ids', ids.join(','));
+  location.href = '{{ url_for("apartments.compare") }}?' + params.toString();
+});
+</script>
+{% endblock %}

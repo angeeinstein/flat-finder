@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Map · {{ app_name }}{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  .map-popup-thumb { width: 200px; aspect-ratio: 4/3; object-fit: cover; border-radius: 6px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+  <h1 class="h4 mb-0"><i class="bi bi-map"></i> Map</h1>
+  <div class="ms-auto d-flex gap-2 flex-wrap">
+    <select id="color-by" class="form-select form-select-sm" style="width:160px">
+      <option value="score">Color: score</option>
+      <option value="price">Color: price</option>
+      <option value="status">Color: status</option>
+      <option value="travel_time">Color: travel time</option>
+    </select>
+    <select id="target" class="form-select form-select-sm" style="width:200px">
+      <option value="">— travel target —</option>
+      {% for t in targets %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
+    </select>
+    <select id="mode" class="form-select form-select-sm" style="width:120px">
+      <option value="car">car</option><option value="walking">walking</option>
+      <option value="bicycle">bicycle</option><option value="transit">transit</option>
+    </select>
+  </div>
+</div>
+<div id="map"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+{% endblock %}

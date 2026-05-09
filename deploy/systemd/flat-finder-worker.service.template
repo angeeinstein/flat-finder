@@ -1,0 +1,22 @@
+[Unit]
+Description=flat-finder background worker (RQ)
+After=network.target postgresql.service redis-server.service
+Wants=postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=__USER__
+Group=__USER__
+WorkingDirectory=__INSTALL_DIR__
+EnvironmentFile=__ENV_FILE__
+ExecStart=__INSTALL_DIR__/venv/bin/python worker.py
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=__DATA_DIR__ /var/log/flat-finder
+
+[Install]
+WantedBy=multi-user.target

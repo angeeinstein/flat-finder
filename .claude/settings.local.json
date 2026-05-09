@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(venv/Scripts/python -m pytest tests/test_auth.py -v --tb=long)",
+      "Bash(venv/Scripts/python -m pytest tests/test_auth.py -v --tb=short)",
+      "Bash(venv/Scripts/python -m pytest tests/test_auth.py::test_wrong_password_rejected -v --tb=long -s)",
+      "Bash(venv/Scripts/pip uninstall *)",
+      "Bash(venv/Scripts/python -m pytest -v --tb=short)",
+      "Bash(venv/Scripts/python -c ' *)",
+      "Bash(venv/Scripts/python -m pytest -q)"
+    ]
+  }
+}

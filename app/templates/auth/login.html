@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_macros.html" import render_field %}
+{% block title %}Sign in · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-4">
+    <div class="card shadow-sm border-0 mt-md-5">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-4 text-center">
+          <i class="bi bi-house-heart text-primary"></i> {{ app_name }}
+        </h1>
+        <form method="post" novalidate>
+          {{ form.hidden_tag() }}
+          {{ render_field(form.username) }}
+          {{ render_field(form.password) }}
+          <div class="form-check mb-3">
+            {{ form.remember(class_="form-check-input") }}
+            {{ form.remember.label(class_="form-check-label") }}
+          </div>
+          <div class="d-grid">
+            {{ form.submit(class_="btn btn-primary") }}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

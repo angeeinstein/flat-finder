@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Gallery · {{ apt.title or 'Apartment #' ~ apt.id }}{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('apartments.detail', apt_id=apt.id) }}" class="btn btn-sm btn-outline-secondary mb-3">← back</a>
+<h1 class="h4 mb-3">Photos · {{ apt.title or 'Apartment #' ~ apt.id }}</h1>
+<div class="row g-2">
+  {% for img in apt.images %}
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="{{ url_for('api.image_thumbnail', image_id=img.id) }}" target="_blank" rel="noopener noreferrer">
+        <img class="gallery-thumb" src="{{ url_for('api.image_thumbnail', image_id=img.id) }}" alt="">
+      </a>
+    </div>
+  {% else %}
+    <div class="col"><em class="text-muted">No images.</em></div>
+  {% endfor %}
+</div>
+{% endblock %}

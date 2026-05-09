@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Admin · {{ app_name }}{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">Admin overview</h1>
+<div class="row g-3">
+  {% for label, val, link in [
+    ('Users', stats.users, url_for('admin.users')),
+    ('Apartments', stats.apartments, url_for('main.dashboard')),
+    ('Open duplicates', stats.open_duplicates, url_for('admin.duplicates')),
+    ('Failed jobs', stats.failed_jobs, url_for('admin.failed_jobs')),
+    ('Active targets', stats.active_targets, url_for('admin.target_addresses')),
+    ('Active categories', stats.active_categories, url_for('admin.rating_categories')),
+  ] %}
+    <div class="col-6 col-md-3">
+      <a href="{{ link }}" class="kpi-card d-block text-decoration-none text-reset">
+        <div class="kpi-value">{{ val }}</div>
+        <div class="kpi-label">{{ label }}</div>
+      </a>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

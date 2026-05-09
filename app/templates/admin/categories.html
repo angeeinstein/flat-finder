@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Rating categories · admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+  <h1 class="h4 mb-0">Rating categories</h1>
+  <a href="{{ url_for('admin.rating_category_new') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> New category</a>
+</div>
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead class="table-light"><tr><th>Order</th><th>Name</th><th>Weight</th><th>Range</th><th>Active</th><th></th></tr></thead>
+      <tbody>
+      {% for c in categories %}
+        <tr>
+          <td>{{ c.display_order }}</td>
+          <td><strong>{{ c.name }}</strong><div class="small text-muted">{{ c.description or '' }}</div></td>
+          <td>{{ c.weight }}</td>
+          <td>{{ c.min_score }}–{{ c.max_score }}</td>
+          <td>{% if c.is_active %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-muted"></i>{% endif %}</td>
+          <td><a href="{{ url_for('admin.rating_category_edit', cat_id=c.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

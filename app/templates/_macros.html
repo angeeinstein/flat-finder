@@ -1,0 +1,70 @@
+{% macro render_field(field, label_visible=true, placeholder=None) %}
+  <div class="mb-3">
+    {% if label_visible and field.label %}
+      {{ field.label(class_="form-label") }}
+    {% endif %}
+    {% set classes = "form-control" %}
+    {% if field.errors %}{% set classes = classes + " is-invalid" %}{% endif %}
+    {% if field.type == "BooleanField" %}
+      <div class="form-check">
+        {{ field(class_="form-check-input") }}
+        {{ field.label(class_="form-check-label") }}
+      </div>
+    {% elif field.type == "SelectField" %}
+      {{ field(class_="form-select" + (" is-invalid" if field.errors else "")) }}
+    {% elif field.type == "TextAreaField" %}
+      {{ field(class_=classes, rows=4, placeholder=placeholder or "") }}
+    {% else %}
+      {{ field(class_=classes, placeholder=placeholder or "") }}
+    {% endif %}
+    {% if field.description %}<small class="form-text text-muted">{{ field.description }}</small>{% endif %}
+    {% for err in field.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+  </div>
+{% endmacro %}
+
+{% macro score_badge(score) %}
+  {% if score is none %}
+    <span class="badge bg-secondary-subtle text-secondary">–</span>
+  {% else %}
+    {% set s = score|round|int %}
+    {% if s >= 80 %}{% set color = "success" %}
+    {% elif s >= 60 %}{% set color = "primary" %}
+    {% elif s >= 40 %}{% set color = "warning" %}
+    {% else %}{% set color = "danger" %}{% endif %}
+    <span class="badge bg-{{ color }}">{{ s }}</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro warning_badges(flags) %}
+  {% for flag in (flags or []) %}
+    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle me-1" title="{{ flag }}">
+      <i class="bi bi-exclamation-triangle"></i> {{ flag.replace('_', ' ') }}
+    </span>
+  {% endfor %}
+{% endmacro %}
+
+{% macro status_badge(status) %}
+  {% if status %}
+    {% set v = status.value if status.value is defined else status %}
+    {% set label = v.replace('_', ' ').title() %}
+    {% set color_map = {'favorite':'success','accepted':'success','interesting':'primary','viewing_scheduled':'info','viewed':'info','contacted':'info','applied':'primary','rejected':'danger','archived':'secondary','new':'secondary'} %}
+    {% set c = color_map.get(v, 'secondary') %}
+    <span class="badge bg-{{ c }}">{{ label }}</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro pagination(page, total_pages, endpoint, args={}) %}
+  {% if total_pages > 1 %}
+    <nav><ul class="pagination justify-content-center">
+      {% set prev_page = page - 1 %}
+      {% set next_page = page + 1 %}
+      <li class="page-item {{ 'disabled' if page <= 1 else '' }}">
+        <a class="page-link" href="{{ url_for(endpoint, page=prev_page, **args) }}">Previous</a>
+      </li>
+      <li class="page-item disabled"><span class="page-link">{{ page }} / {{ total_pages }}</span></li>
+      <li class="page-item {{ 'disabled' if page >= total_pages else '' }}">
+        <a class="page-link" href="{{ url_for(endpoint, page=next_page, **args) }}">Next</a>
+      </li>
+    </ul></nav>
+  {% endif %}
+{% endmacro %}

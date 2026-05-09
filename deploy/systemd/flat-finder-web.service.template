@@ -1,0 +1,29 @@
+[Unit]
+Description=flat-finder web (Gunicorn)
+After=network.target postgresql.service redis-server.service
+Wants=postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=__USER__
+Group=__USER__
+WorkingDirectory=__INSTALL_DIR__
+EnvironmentFile=__ENV_FILE__
+RuntimeDirectory=flat-finder
+RuntimeDirectoryMode=0755
+ExecStart=__INSTALL_DIR__/venv/bin/gunicorn wsgi:app \
+    --workers 4 \
+    --bind 127.0.0.1:8000 \
+    --timeout 120 \
+    --access-logfile /var/log/flat-finder/access.log \
+    --error-logfile /var/log/flat-finder/error.log
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=__DATA_DIR__ /var/log/flat-finder /run/flat-finder
+
+[Install]
+WantedBy=multi-user.target

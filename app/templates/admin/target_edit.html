@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "_macros.html" import render_field %}
+{% block title %}Target address · admin{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('admin.target_addresses') }}" class="btn btn-sm btn-outline-secondary mb-3">← back</a>
+<h1 class="h4 mb-3">{{ 'Edit ' + target.name if target else 'New target address' }}</h1>
+<form method="post" novalidate class="card border-0 shadow-sm">
+  <div class="card-body">
+    {{ form.hidden_tag() }}
+    <div class="row g-2">
+      <div class="col-md-6">{{ render_field(form.name) }}</div>
+      <div class="col-md-6">{{ render_field(form.address) }}</div>
+      <div class="col-md-3">{{ render_field(form.lat) }}</div>
+      <div class="col-md-3">{{ render_field(form.lng) }}</div>
+      <div class="col-md-3">{{ render_field(form.is_active) }}</div>
+    </div>
+    <small class="text-muted d-block mb-2">Leave coordinates blank to geocode automatically.</small>
+    <button type="submit" class="btn btn-primary">{{ form.submit.label.text }}</button>
+  </div>
+</form>
+{% endblock %}

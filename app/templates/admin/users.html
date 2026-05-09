@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Users · admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+  <h1 class="h4 mb-0">Users</h1>
+  <a href="{{ url_for('admin.user_new') }}" class="btn btn-primary btn-sm"><i class="bi bi-person-plus"></i> New user</a>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table mb-0 align-middle">
+      <thead class="table-light"><tr><th>Username</th><th>Email</th><th>Role</th><th>Active</th><th>Last login</th><th></th></tr></thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.username }}</td>
+          <td class="small">{{ u.email }}</td>
+          <td><span class="badge bg-{{ 'primary' if u.role.value == 'admin' else 'secondary' }}">{{ u.role.value }}</span></td>
+          <td>{% if u.is_active %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-muted"></i>{% endif %}</td>
+          <td class="small text-muted">{{ u.last_login_at.strftime('%Y-%m-%d %H:%M') if u.last_login_at else '–' }}</td>
+          <td><a href="{{ url_for('admin.user_edit', user_id=u.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

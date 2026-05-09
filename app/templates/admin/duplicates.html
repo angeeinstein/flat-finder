@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination %}
+{% block title %}Duplicates · admin{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">Duplicate candidates</h1>
+
+{% if not candidates %}
+  <p class="text-muted">No pending duplicate candidates.</p>
+{% else %}
+  {% for c in candidates %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="badge bg-primary">Confidence: {{ c.confidence }}</span>
+          <small class="text-muted">{{ c.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+        </div>
+        <div class="row g-3">
+          {% for apt in [c.apartment_a, c.apartment_b] %}
+          <div class="col-md-6">
+            <div class="border rounded p-3">
+              <h6 class="mb-1"><a href="{{ url_for('apartments.detail', apt_id=apt.id) }}">{{ apt.title or 'Apartment #' ~ apt.id }}</a></h6>
+              <div class="small text-muted">{{ apt.address or '–' }}</div>
+              <div class="small mt-1">
+                {% if apt.price %}€{{ '%.0f'|format(apt.price) }}{% endif %}
+                {% if apt.living_area_m2 %} · {{ '%.0f'|format(apt.living_area_m2) }} m²{% endif %}
+                {% if apt.rooms %} · {{ apt.rooms }} rooms{% endif %}
+              </div>
+              <form method="post" action="{{ url_for('admin.duplicate_confirm', cand_id=c.id) }}" class="mt-2 d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="keep_id" value="{{ apt.id }}">
+                <button class="btn btn-sm btn-success">Keep this, merge other</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="mt-2">
+          <strong class="small">Signals:</strong>
+          {% for sig in c.signals %}<span class="badge bg-secondary-subtle text-dark me-1">{{ sig }}</span>{% endfor %}
+        </div>
+        <form method="post" action="{{ url_for('admin.duplicate_dismiss', cand_id=c.id) }}" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-outline-secondary mt-2">Not a duplicate</button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+  {{ pagination(page, total_pages, 'admin.duplicates') }}
+{% endif %}
+{% endblock %}

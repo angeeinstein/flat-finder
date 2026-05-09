@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Target addresses · admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+  <h1 class="h4 mb-0">Target addresses</h1>
+  <a href="{{ url_for('admin.target_address_new') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> New target</a>
+</div>
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table mb-0 align-middle">
+      <thead class="table-light"><tr><th>Name</th><th>Address</th><th>Coords</th><th>Active</th><th></th></tr></thead>
+      <tbody>
+      {% for t in targets %}
+        <tr>
+          <td><strong>{{ t.name }}</strong></td>
+          <td class="small">{{ t.address }}</td>
+          <td class="small text-muted">{% if t.lat and t.lng %}{{ '%.4f, %.4f'|format(t.lat, t.lng) }}{% else %}—{% endif %}</td>
+          <td>{% if t.is_active %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-muted"></i>{% endif %}</td>
+          <td><a href="{{ url_for('admin.target_address_edit', tid=t.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
