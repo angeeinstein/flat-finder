@@ -387,16 +387,20 @@ update_self() {
 # ---------- update app ----------
 update_app() {
     log_step "Updating application"
-    pushd "$INSTALL_DIR" >/dev/null
-    if ! git diff --quiet || ! git diff --cached --quiet; then
+    local git="sudo -u $APP_USER git -C $INSTALL_DIR"
+
+    # install.sh was just replaced by update_self(); restore it so git doesn't
+    # see it as a local modification before git pull brings the real version.
+    $git checkout -- install.sh 2>/dev/null || true
+
+    if ! $git diff --quiet || ! $git diff --cached --quiet; then
         log_warn "Local repo has uncommitted changes."
         confirm "Stash and continue? (changes will be saved)" "N" && \
-            sudo -u "$APP_USER" git stash push -u -m "auto-stash-before-update-$(date +%s)" || \
-            { log_warn "Aborting update."; popd >/dev/null; return 1; }
+            $git stash push -u -m "auto-stash-before-update-$(date +%s)" || \
+            { log_warn "Aborting update."; return 1; }
     fi
-    sudo -u "$APP_USER" git fetch --all --tags
-    sudo -u "$APP_USER" git pull --ff-only
-    popd >/dev/null
+    $git fetch --all --tags
+    $git pull --ff-only
 
     setup_python
     run_migrations
