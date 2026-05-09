@@ -173,3 +173,20 @@ def job_status(job_id: int):
     if job.created_by_id != current_user.id and not current_user.is_admin:
         abort(403)
     return render_template("main/job_status.html", job=job)
+
+
+@bp.route("/jobs/<int:job_id>/delete", methods=["POST"])
+@login_required
+def delete_job(job_id: int):
+    job = db.session.get(ImportJob, job_id)
+    if not job:
+        abort(404)
+    if job.created_by_id != current_user.id and not current_user.is_admin:
+        abort(403)
+    if job.status == ImportJobStatus.RUNNING:
+        flash("Cannot delete a running job.", "warning")
+        return redirect(url_for("main.job_status", job_id=job_id))
+    db.session.delete(job)
+    db.session.commit()
+    flash("Job deleted.", "success")
+    return redirect(url_for("main.import_url"))

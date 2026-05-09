@@ -1,7 +1,10 @@
 """Apartment blueprint: detail, create, edit, gallery, history, compare."""
 from __future__ import annotations
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+import shutil
+from pathlib import Path
+
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.extensions import db
@@ -168,6 +171,28 @@ def edit(apt_id: int):
         flash("Apartment updated.", "success")
         return redirect(url_for("apartments.detail", apt_id=apt.id))
     return render_template("apartments/edit.html", form=form, apt=apt)
+
+
+@bp.route("/<int:apt_id>/delete", methods=["POST"])
+@login_required
+def delete(apt_id: int):
+    apt = db.session.get(Apartment, apt_id)
+    if not apt:
+        abort(404)
+    if not current_user.is_admin and apt.created_by_id != current_user.id:
+        abort(403)
+
+    # Remove image files from disk
+    image_dir = Path(current_app.config["IMAGE_DIR"]) / str(apt_id)
+    if image_dir.exists():
+        shutil.rmtree(image_dir, ignore_errors=True)
+
+    title = apt.title or f"#{apt_id}"
+    db.session.delete(apt)
+    db.session.commit()
+    log_action("apartment_deleted", target_type="Apartment", target_id=apt_id, details={"title": title})
+    flash(f"Apartment \"{title}\" deleted.", "success")
+    return redirect(url_for("main.dashboard"))
 
 
 @bp.route("/<int:apt_id>/notes", methods=["POST"])

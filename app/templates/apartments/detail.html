@@ -18,6 +18,13 @@
       <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
     </form>
     <a href="{{ url_for('apartments.history', apt_id=apt.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-clock-history"></i> History</a>
+    {% if current_user.is_admin or apt.created_by_id == current_user.id %}
+    <form action="{{ url_for('apartments.delete', apt_id=apt.id) }}" method="post" class="d-inline"
+          onsubmit="return confirm('Permanently delete this apartment and all its data?')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i> Delete</button>
+    </form>
+    {% endif %}
   </div>
 </div>
 

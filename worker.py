@@ -1,17 +1,16 @@
 """RQ worker entry point.
 
 Run with:
-    venv/bin/rq worker -u $REDIS_URL -c worker flat-finder
-or:
     venv/bin/python worker.py
+or (directly via rq CLI):
+    venv/bin/rq worker -u $REDIS_URL flat-finder
 """
 from __future__ import annotations
 
-import os
 import sys
 
 from redis import Redis
-from rq import Connection, Queue, Worker
+from rq import Queue, Worker
 
 from app import create_app
 
@@ -24,9 +23,8 @@ def main() -> int:
     app.app_context().push()
     redis_url = app.config["REDIS_URL"]
     conn = Redis.from_url(redis_url)
-    with Connection(conn):
-        worker = Worker([Queue(QUEUE_NAME)])
-        worker.work(with_scheduler=True)
+    worker = Worker([Queue(QUEUE_NAME, connection=conn)], connection=conn)
+    worker.work(with_scheduler=True)
     return 0
 
 
