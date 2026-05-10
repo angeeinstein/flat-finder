@@ -11,7 +11,9 @@
       "Bash(venv/Scripts/python -m pytest tests/test_importers.py -x -q)",
       "Bash(venv/Scripts/python -m pytest -x -q)",
       "Bash(.venv\\\\Scripts\\\\python -m pytest tests/ -q)",
-      "WebFetch(domain:www.willhaben.at)"
+      "WebFetch(domain:www.willhaben.at)",
+      "Bash(python _analyze_immoscout24.py)",
+      "Bash(.\\\\venv\\\\Scripts\\\\python.exe _analyze_immoscout24.py)"
     ]
   }
 }

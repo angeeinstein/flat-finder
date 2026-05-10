@@ -3,11 +3,13 @@ from __future__ import annotations
 
 from app.services.importer.base import ImporterBase
 from app.services.importer.generic import GenericImporter
+from app.services.importer.immoscout24 import ImmoScout24Importer
 from app.services.importer.willhaben import WillhabenImporter
 
 
 _REGISTRY: list[ImporterBase] = [
     WillhabenImporter(),
+    ImmoScout24Importer(),
     GenericImporter(),  # always last (fallback)
 ]
 

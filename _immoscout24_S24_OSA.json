@@ -1,0 +1,15 @@
+{
+  "config": {
+    "loggingCat": [],
+    "requiredAsyncLoadedMiddlewares": [
+      "apsMiddleware",
+      "openWrapMiddleware"
+    ],
+    "cookieConsentRequired": true,
+    "stickyPosition": 0
+  },
+  "openWrapConfig": {
+    "publisherId": "167464",
+    "profileId": "19253"
+  }
+}

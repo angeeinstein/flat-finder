@@ -1,0 +1,6 @@
+{
+  "webMetrics": {
+    "page": "at-expose-new",
+    "endpoint": "https://pro-web-metrics.alias.s24cloud.net/web-metrics/web-vitals-v2"
+  }
+}

@@ -1,0 +1,700 @@
+{
+  "Expose:69fd592474ad1b054f4b8814": {
+    "__typename": "Expose",
+    "id": "69fd592474ad1b054f4b8814",
+    "description": {
+      "__typename": "Description",
+      "title": "Moderne 4-Zimmer Neubauwohnung mit West-Loggia in Stammersdorf – Hochwertiges Wohnen mit Stil",
+      "locationNote": "Brünner Straße, Stammersdorfer Straße, Straßenbahn 30, 31",
+      "descriptionNote": "<p>In ruhiger Lage von Stammersdorf gelangt diese moderne Neubauwohnung, die durch durchdachtes Design, hochwertige Ausstattung und eine sonnige Loggia mit Westausrichtung überzeugt, zur Vermietung.</p><p>Die hochwertige Ausstattung umfasst edle Parkettböden, Fußbodenheizung, moderne Sanitäreinrichtungen, stilvolle Fliesen sowie eine energieeffiziente Bauweise. Die durchdachte Raumaufteilung schafft ein perfektes Zuhause für Singles oder Paare.</p><p>Dank der attraktiven Lage in Stammersdorf profitieren Sie von einer perfekten Kombination aus urbaner Infrastruktur und naturnahem Wohnen.</p><p><b>Highlights:</b></p><ul><li><b>Neubau mit moderner Architektur</b></li><li><b>4 Zimmer</b></li><li><b>Loggia mit Westausrichtung</b></li><li><b>Hochwertige Ausstattung</b></li><li><b>Energieeffiziente Bauweise</b></li><li><b>Ruhige Lage mit guter Anbindung</b></li></ul><p><b>Miete:</b></p><p>Die Miete inkl. Betriebskosten und Steuer beträgt <b>1.599,-- Euro</b> im Monat.</p><p>Kaution: 3 Monatsmieten</p><p>Vertragserrichtung: 396,-- Euro inkl. Steuer</p><p><b>Für Fragen bzw. Besichtigungen steht Ihnen <u>Herr Kevin Gödel</u> sehr gerne unter <u>[Telefonnummer entfernt]</u> oder <u>[E-Mail-Adresse entfernt]</u> zur Verfügung.</b></p><p>Die verwendeten Fotos weisen teilweise KI-generierte Inhalte auf.</p><p>Wir weisen darauf hin, dass zwischen dem Vermittler und dem zu vermittelnden Dritten ein familiäres oder wirtschaftliches Naheverhältnis besteht.</p><p>Der Immobilienmakler erklärt, dass er – entgegen dem in der Immobilienwirtschaft üblichen Geschäftsgebrauch des Doppelmaklers – einseitig nur für den Vermieter tätig ist.</p><br /><p><b>Infrastruktur / Entfernungen</b></p><p><b>Gesundheit</b><br />Arzt &lt;500m<br />Apotheke &lt;500m<br />Klinik &lt;4.000m<br />Krankenhaus &lt;1.000m<br /><br /><b>Kinder &amp; Schulen</b><br />Schule &lt;500m<br />Kindergarten &lt;500m<br />Universität &lt;1.500m<br />Höhere Schule &lt;5.000m<br /><br /><b>Nahversorgung</b><br />Supermarkt &lt;500m<br />Bäckerei &lt;500m<br />Einkaufszentrum &lt;3.500m<br /><br /><b>Sonstige</b><br />Geldautomat &lt;500m<br />Bank &lt;500m<br />Post &lt;3.000m<br />Polizei &lt;1.000m<br /><br /><b>Verkehr</b><br />Bus &lt;500m<br />U-Bahn &lt;3.500m<br />Straßenbahn &lt;500m<br />Bahnhof &lt;3.500m<br />Autobahnanschluss &lt;4.000m<br /><br />Angaben Entfernung Luftlinie / Quelle: OpenStreetMap</p>",
+      "miscellaneousNote": null,
+      "fittingNote": null
+    },
+    "pictures": [
+      {
+        "__typename": "Picture",
+        "url": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217325-d6ff2228d8e34d8285e52f31ee66603b",
+        "title": "",
+        "caption": "Helles, leeres Wohnzimmer mit Parkettboden und Zugang zu einem Balkon."
+      },
+      {
+        "__typename": "Picture",
+        "url": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217469-1d2ffc921ca64dddbae6cd247035ca5d",
+        "title": "",
+        "caption": "Geräumiger Balkon mit Fliesenboden und Blick auf die umliegenden Gebäude."
+      },
+      {
+        "__typename": "Picture",
+        "url": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217352-5209b7100c9045ceb5473bb6ce336146",
+        "title": "",
+        "caption": "Leeres Schlafzimmer mit Parkettboden und großen Fenstern, die viel Licht hereinlassen."
+      },
+      {
+        "__typename": "Picture",
+        "url": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217371-33a96d96da6e470c8d4fa297cab65350",
+        "title": "",
+        "caption": "Offener Wohnbereich mit integrierter, moderner Küchenzeile und Parkettboden."
+      },
+      {
+        "__typename": "Picture",
+        "url": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217390-9c3c6c8d98924899a7b641cb02be2477",
+        "title": "",
+        "caption": "Helle Küchenzeile mit weißen Schränken und integrierten Geräten in einem offenen Raum."
+      },
+      {
+        "__typename": "Picture",
+        "url": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217411-5ceb4121e7ab469caa6d8d487e5f272c",
+        "title": "",
+        "caption": "Helles Zimmer mit Parkettboden und einem großen Fenster mit Blick auf die Stadt."
+      },
+      {
+        "__typename": "Picture",
+        "url": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217436-893e05388334459c898fe40c41687b19",
+        "title": "",
+        "caption": "Geräumiges Zimmer mit Parkettboden und Zugang zu einem kleinen Balkon."
+      },
+      {
+        "__typename": "Picture",
+        "url": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217244-1dc87f39ca6846c594aad9cce4857300",
+        "title": "",
+        "caption": "Ruhiges Zimmer mit Parkettboden und zwei Fenstern, die eine grüne Aussicht bieten."
+      },
+      {
+        "__typename": "Picture",
+        "url": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217264-c67bbf644d3247c9ad8941a1d97b2c43",
+        "title": "",
+        "caption": "Modernes Badezimmer mit begehbarer Dusche, Doppelwaschbecken und hellen Fliesen."
+      },
+      {
+        "__typename": "Picture",
+        "url": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217284-10cb04fe95774304bced8868c0d3ab7b",
+        "title": "",
+        "caption": "Kleines Gäste-WC mit wandhängender Toilette, Waschbecken und grauen Bodenfliesen."
+      },
+      {
+        "__typename": "Picture",
+        "url": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217137-36d54f0bf5eb4d3b87ebd258a019b175",
+        "title": "",
+        "caption": "Heller Flur mit Fliesenboden, der zu verschiedenen Zimmern der Wohnung führt."
+      },
+      {
+        "__typename": "Picture",
+        "url": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778133839-d3271cfae3674c26bb7704ed366d5695",
+        "title": "",
+        "caption": "Grundriss der Wohnung mit einer Fläche von 103,72 m² und Loggia."
+      }
+    ],
+    "priceInformation": {
+      "__typename": "PriceInformation",
+      "primaryPrice": 1599,
+      "pricePrefix": null,
+      "primaryPriceLabel": "Monatliche Kosten",
+      "primaryPriceUnitLabel": "€",
+      "commissionNote": null,
+      "hasCommission": false,
+      "prices": {
+        "__typename": "Prices",
+        "buy": null,
+        "mainRent": null,
+        "totalRent": null,
+        "rentPerSquareMeter": 15.42,
+        "buyPerSquareMeter": null
+      },
+      "priceReduction": null
+    },
+    "project": {
+      "__typename": "Project",
+      "state": null
+    },
+    "contact": {
+      "__typename": "Contact",
+      "fullName": "Herr Kevin Gödel",
+      "company": {
+        "__typename": "ContactCompany",
+        "name": "RIMMO Prime Vermittlungs GmbH",
+        "url": "www.prime-immobilien.at"
+      },
+      "avatar": null,
+      "contactPhone": "+436644128427"
+    },
+    "costs": {
+      "__typename": "Costs",
+      "oneTime": [
+        {
+          "__typename": "CostsValue",
+          "text": "Provision: Gemäß Erstauftraggeberprinzip bezahlt der Abgeber die Provision.",
+          "label": null,
+          "price": null,
+          "hint": "ImmoScout24 Tipp: Seit dem 01.07.2023 gilt das Bestellerprinzip. Die Vermittlung von Wohnungen und Häusern zur Miete über Inserate ist seitdem für Suchende provisionsfrei.",
+          "priceReduction": null
+        },
+        {
+          "__typename": "CostsValue",
+          "text": "Kaution: 3 Bruttomonatsmieten",
+          "label": null,
+          "price": null,
+          "hint": null,
+          "priceReduction": null
+        }
+      ],
+      "running": [
+        {
+          "__typename": "CostsValue",
+          "text": null,
+          "label": "Monatliche Kosten",
+          "price": "1.599 €",
+          "hint": null,
+          "priceReduction": null
+        },
+        {
+          "__typename": "CostsValue",
+          "text": null,
+          "label": "Preis pro m²",
+          "price": "15,42 €",
+          "hint": "Kalkuliert von ImmoScout24",
+          "priceReduction": null
+        },
+        {
+          "__typename": "CostsValue",
+          "text": null,
+          "label": "Gesamtbelastung Netto",
+          "price": "1.453,64 €",
+          "hint": null,
+          "priceReduction": null
+        },
+        {
+          "__typename": "CostsValue",
+          "text": null,
+          "label": "USt. Gesamtbelastung",
+          "price": "145,36 €",
+          "hint": null,
+          "priceReduction": null
+        },
+        {
+          "__typename": "CostsValue",
+          "text": null,
+          "label": "Miete",
+          "price": "1.201,6 €",
+          "hint": null,
+          "priceReduction": null
+        },
+        {
+          "__typename": "CostsValue",
+          "text": null,
+          "label": "USt. Miete",
+          "price": "120,16 €",
+          "hint": null,
+          "priceReduction": null
+        },
+        {
+          "__typename": "CostsValue",
+          "text": null,
+          "label": "Betriebskosten",
+          "price": "252,04 €",
+          "hint": null,
+          "priceReduction": null
+        },
+        {
+          "__typename": "CostsValue",
+          "text": null,
+          "label": "USt. Betriebskosten",
+          "price": "25,2 €",
+          "hint": null,
+          "priceReduction": null
+        }
+      ]
+    },
+    "characteristics": [
+      {
+        "__typename": "Characteristic",
+        "key": "availability",
+        "type": "FEATURE",
+        "items": [
+          {
+            "__typename": "CloudGroup",
+            "key": "available_from",
+            "text": "Verfügbar ab per sofort",
+            "augmentation": null
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "rental_period",
+            "text": "befristet auf 5 Jahre",
+            "augmentation": null
+          }
+        ]
+      },
+      {
+        "__typename": "Characteristic",
+        "key": "condition",
+        "type": "FEATURE",
+        "items": [
+          {
+            "__typename": "CloudGroup",
+            "key": "estate_detail_type",
+            "text": "Wohnung",
+            "augmentation": null
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "year_of_construction",
+            "text": "Baujahr 2015",
+            "augmentation": null
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "age",
+            "text": "Neubau",
+            "augmentation": null
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "condition_type",
+            "text": "Gepflegt",
+            "augmentation": null
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "floor_PARQUET",
+            "text": "Parkett",
+            "augmentation": null
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "floor_SCREED",
+            "text": "Estrich",
+            "augmentation": null
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "floor_TILES",
+            "text": "Fliesen",
+            "augmentation": null
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "floor_localization",
+            "text": "1. Etage",
+            "augmentation": null
+          }
+        ]
+      },
+      {
+        "__typename": "Characteristic",
+        "key": "area",
+        "type": "FEATURE",
+        "items": [
+          {
+            "__typename": "CloudGroup",
+            "key": "living_area",
+            "text": "Wohnfläche 103,72 m²",
+            "augmentation": null
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "total_area",
+            "text": "Gesamtfläche 111,1 m²",
+            "augmentation": null
+          }
+        ]
+      },
+      {
+        "__typename": "Characteristic",
+        "key": "open_space",
+        "type": "FEATURE",
+        "items": [
+          {
+            "__typename": "CloudGroup",
+            "key": "number_of_loggia",
+            "text": "1 Loggia 7,38 m² westseitig",
+            "augmentation": null
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "open_area",
+            "text": "Freiflächen 7,38 m²",
+            "augmentation": null
+          }
+        ]
+      },
+      {
+        "__typename": "Characteristic",
+        "key": "rooms",
+        "type": "FEATURE",
+        "items": [
+          {
+            "__typename": "CloudGroup",
+            "key": "number_of_rooms",
+            "text": "4 Zimmer",
+            "augmentation": null
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "number_of_bathrooms",
+            "text": "1 Badezimmer",
+            "augmentation": null
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "number_of_toilets",
+            "text": "1 Toilette",
+            "augmentation": null
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "rooms_facility_GUEST_TOILET",
+            "text": "Gäste WC",
+            "augmentation": {
+              "__typename": "Augmentation",
+              "value": "GUEST_TOILET",
+              "citation": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217284-10cb04fe95774304bced8868c0d3ab7b",
+              "citationSource": "pictures[9]"
+            }
+          }
+        ]
+      },
+      {
+        "__typename": "Characteristic",
+        "key": "features",
+        "type": "FITTING",
+        "items": [
+          {
+            "__typename": "CloudGroup",
+            "key": "features_kitchen_FITTED_KITCHEN",
+            "text": "Einbauküche",
+            "augmentation": {
+              "__typename": "Augmentation",
+              "value": "FITTED_KITCHEN",
+              "citation": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217371-33a96d96da6e470c8d4fa297cab65350",
+              "citationSource": "pictures[3]"
+            }
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "features_kitchen_KITCHENETTE",
+            "text": "Pantry",
+            "augmentation": {
+              "__typename": "Augmentation",
+              "value": "KITCHENETTE",
+              "citation": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217371-33a96d96da6e470c8d4fa297cab65350",
+              "citationSource": "pictures[3]"
+            }
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "features_kitchen_OPEN_KITCHEN",
+            "text": "Offene Küche",
+            "augmentation": null
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "bathroom_SHOWER",
+            "text": "Dusche",
+            "augmentation": null
+          },
+          {
+            "__typename": "CloudGroup",
+            "key": "features_category",
+            "text": "Gehobene Ausstattung",
+            "augmentation": {
+              "__typename": "Augmentation",
+              "value": "UPPERCLASS",
+              "citation": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217264-c67bbf644d3247c9ad8941a1d97b2c43",
+              "citationSource": "pictures[8]"
+            }
+          }
+        ]
+      },
+      {
+        "__typename": "Characteristic",
+        "key": "needs",
+        "type": "FITTING",
+        "items": [
+          {
+            "__typename": "CloudGroup",
+            "key": "lift_LIFT",
+            "text": "Personenaufzug",
+            "augmentation": null
+          }
+        ]
+      }
+    ],
+    "addressString": "1210 Wien",
+    "isForeignExpose": false,
+    "isCooperativeHousing": false,
+    "localization": {
+      "__typename": "Localization",
+      "geoHierarchy": [
+        "009",
+        "009001",
+        "009001021"
+      ],
+      "address": {
+        "__typename": "Address",
+        "city": "Wien",
+        "countryCode": "AT",
+        "street": null,
+        "streetNumber": null,
+        "zip": "1210"
+      },
+      "information": {
+        "__typename": "LocalizationInformation",
+        "floor": 1,
+        "numberOfFloors": null
+      },
+      "transit": null
+    },
+    "condition": {
+      "__typename": "Condition",
+      "type": "WELL_KEPT",
+      "yearOfConstruction": "2015",
+      "lastModification": null,
+      "heatingTypes": [
+        {
+          "__typename": "AugmentedValue",
+          "label": "Zentralheizung",
+          "value": "CENTRAL_HEATING",
+          "augmentation": null
+        },
+        {
+          "__typename": "AugmentedValue",
+          "label": "Fußbodenheizung",
+          "value": "FLOOR_HEATING",
+          "augmentation": {
+            "__typename": "Augmentation",
+            "value": "FLOOR_HEATING",
+            "citation": "Fußbodenheizung",
+            "citationSource": "description.descriptionNote"
+          }
+        }
+      ],
+      "firingTypes": [],
+      "energyCertification": {
+        "__typename": "EnergyCertification",
+        "heatingDemand": {
+          "__typename": "AugmentedValue",
+          "label": "36.7",
+          "value": "36.7",
+          "augmentation": null
+        },
+        "heatingDemandClass": {
+          "__typename": "AugmentedValue",
+          "label": "B",
+          "value": "B",
+          "augmentation": null
+        },
+        "totalEnergyEfficiencyFactor": {
+          "__typename": "AugmentedValue",
+          "label": "1.03",
+          "value": "1.03",
+          "augmentation": null
+        },
+        "totalEnergyEfficiencyFactorClass": {
+          "__typename": "AugmentedValue",
+          "label": "C",
+          "value": "C",
+          "augmentation": null
+        }
+      }
+    },
+    "fitting": {
+      "__typename": "Fitting",
+      "accessibility": [],
+      "category": "UPPERCLASS",
+      "firingTypes": null,
+      "heatingTypes": null,
+      "kitchen": [
+        "OPEN_KITCHEN",
+        "KITCHENETTE",
+        "FITTED_KITCHEN"
+      ],
+      "lift": [
+        "LIFT"
+      ],
+      "numberOfParkingSpaces": 0
+    },
+    "object": {
+      "__typename": "ExposeObject",
+      "isRented": false,
+      "petsAllowed": null,
+      "availableFrom": "per sofort",
+      "rentalPeriod": "5",
+      "rentalPeriodType": "YEAR"
+    },
+    "area": {
+      "__typename": "Area",
+      "primaryArea": 103.72,
+      "livingArea": 103.72,
+      "balconyArea": null,
+      "cellarArea": null,
+      "gardenArea": null,
+      "plotArea": null,
+      "totalArea": 111.1,
+      "outdoorSpaces": [
+        "LOGGIA"
+      ],
+      "numberOfRooms": 4,
+      "numberOfBedrooms": null,
+      "numberOfBalconies": null,
+      "numberOfLoggia": 1,
+      "loggiaArea": 7.38,
+      "effectiveArea": null
+    },
+    "type": {
+      "__typename": "PropertyType",
+      "estateDetailType": "APARTMENT",
+      "useType": "RESIDENTIAL",
+      "estateType": "APARTMENT",
+      "transferType": "RENT",
+      "isEditorialProperty": null,
+      "isSocialHousing": null
+    },
+    "meta": {
+      "__typename": "Meta",
+      "privateInsertion": false,
+      "cwid": "012.0015I00000SMCEc",
+      "ssoId": "147259263",
+      "hasChildren": false,
+      "parentId": null,
+      "isSmartExpose": true,
+      "features": {
+        "__typename": "Features",
+        "logo": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?id=dbf49eb40e55420f8473891006cc2f7b",
+        "remoteViewingAvailable": false,
+        "badges": [
+          {
+            "__typename": "AugmentedValue",
+            "label": "Provisionsfrei",
+            "value": "FREE_OF_COMMISSION",
+            "augmentation": null
+          },
+          {
+            "__typename": "AugmentedValue",
+            "label": "Loggia",
+            "value": "LOGGIA",
+            "augmentation": null
+          }
+        ],
+        "realtorAssociationBadges": [],
+        "virtualTourUrl": null,
+        "videoUrl": null,
+        "premiumPartnerAward2023": false,
+        "salesProfessionalAward": false,
+        "immoExpertThreeStarsAward": false,
+        "immoExpertFiveStarsAward": false,
+        "realtorBadgeGold": false,
+        "realtorBadgeSilver": true,
+        "realtorBadgeBronze": false
+      },
+      "userRequirements": null,
+      "popularity": {
+        "__typename": "Popularity",
+        "score": 0
+      },
+      "auditing": {
+        "__typename": "Auditing",
+        "updatedAt": "2026-05-08T03:31:49.747Z"
+      }
+    },
+    "keyfacts": {
+      "__typename": "Keyfacts",
+      "floorLabel": "1",
+      "areaLabel": "104 m²",
+      "outdoorLabel": "Loggia 7 m²",
+      "flatLabel": null,
+      "base": [
+        "104 m²",
+        "4 Zimmer",
+        "Loggia 7 m²"
+      ],
+      "floor": {
+        "__typename": "AugmentedValue",
+        "label": "1",
+        "value": null,
+        "augmentation": null
+      },
+      "area": {
+        "__typename": "AugmentedValue",
+        "label": "104 m²",
+        "value": null,
+        "augmentation": null
+      },
+      "outdoorSpaces": [
+        {
+          "__typename": "AugmentedValue",
+          "label": "Loggia 7 m²",
+          "value": null,
+          "augmentation": null
+        }
+      ],
+      "flat": null,
+      "main": [
+        {
+          "__typename": "AugmentedValue",
+          "label": "104 m²",
+          "value": null,
+          "augmentation": null
+        },
+        {
+          "__typename": "AugmentedValue",
+          "label": "4 Zimmer",
+          "value": null,
+          "augmentation": null
+        },
+        {
+          "__typename": "AugmentedValue",
+          "label": "Loggia 7 m²",
+          "value": null,
+          "augmentation": null
+        }
+      ],
+      "quickInfo": [
+        {
+          "__typename": "AugmentedValue",
+          "label": "Etage",
+          "value": "1",
+          "augmentation": null
+        },
+        {
+          "__typename": "AugmentedValue",
+          "label": "Befristung",
+          "value": "5 Jahre",
+          "augmentation": null
+        },
+        {
+          "__typename": "AugmentedValue",
+          "label": "Kaution",
+          "value": "3 Bruttomonatsmieten",
+          "augmentation": null
+        }
+      ]
+    },
+    "targeting": {
+      "__typename": "Targeting",
+      "obj_regio1": "009",
+      "obj_regio2": "009001",
+      "obj_regio3": "009001021",
+      "obj_ityp": "0",
+      "obj_zipCode": "1210",
+      "obj_title": "Moderne 4-Zimmer Neubauwohnung mit West-Loggia in Stammersdorf – Hochwertiges Wohnen mit Stil",
+      "obj_picture": "https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217325-d6ff2228d8e34d8285e52f31ee66603b",
+      "obj_exclusiveExpose": "true",
+      "obj_cwId": "ADS0018341749",
+      "obj_purchasePrice": null,
+      "obj_purchasePriceRange": null,
+      "obj_baseRentRange": "8"
+    },
+    "attachments": []
+  },
+  "ROOT_QUERY": {
+    "__typename": "Query",
+    "expose({\"id\":\"69fd592474ad1b054f4b8814\"})": {
+      "__ref": "Expose:69fd592474ad1b054f4b8814"
+    },
+    "schemaMarkup({\"exposeId\":\"69fd592474ad1b054f4b8814\"})": {
+      "__typename": "SchemaMarkup",
+      "graph": "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://www.immobilienscout24.at/expose/69fd592474ad1b054f4b8814\",\"url\":\"https://www.immobilienscout24.at/expose/69fd592474ad1b054f4b8814\",\"name\":\"Moderne 4-Zimmer Neubauwohnung mit West-Loggia in Stammersdorf – Hochwertiges Wohnen mit Stil\",\"description\":\"<p>In ruhiger Lage von Stammersdorf gelangt diese moderne Neubauwohnung, die durch durchdachtes Design, hochwertige Ausstattung und eine sonnige Loggia mit Westausrichtung überzeugt, zur Vermietung.</p><p>Die hochwertige Ausstattung umfasst edle Parkettböden, Fußbodenheizung, moderne Sanitäreinricht…\",\"publisher\":{\"@id\":\"https://www.immobilienscout24.at/\"},\"mainEntity\":{\"@id\":\"https://www.immobilienscout24.at/expose/69fd592474ad1b054f4b8814\"}},{\"@type\":\"Product\",\"@id\":\"https://www.immobilienscout24.at/expose/69fd592474ad1b054f4b8814\",\"name\":\"Moderne 4-Zimmer Neubauwohnung mit West-Loggia in Stammersdorf – Hochwertiges Wohnen mit Stil\",\"url\":\"https://www.immobilienscout24.at/expose/69fd592474ad1b054f4b8814\",\"image\":[\"https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217325-d6ff2228d8e34d8285e52f31ee66603b\",\"https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217469-1d2ffc921ca64dddbae6cd247035ca5d\",\"https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217352-5209b7100c9045ceb5473bb6ce336146\"],\"description\":\"<p>In ruhiger Lage von Stammersdorf gelangt diese moderne Neubauwohnung, die durch durchdachtes Design, hochwertige Ausstattung und eine sonnige Loggia mit Westausrichtung überzeugt, zur Vermietung.</p><p>Die hochwertige Ausstattung umfasst edle Parkettböden, Fußbodenheizung, moderne Sanitäreinricht…\",\"offers\":{\"@type\":\"Offer\",\"@id\":\"https://www.immobilienscout24.at/expose/69fd592474ad1b054f4b8814\",\"url\":\"https://www.immobilienscout24.at/expose/69fd592474ad1b054f4b8814\",\"priceCurrency\":\"EUR\",\"price\":1599,\"availability\":\"https://schema.org/InStock\"}},{\"@type\":\"RealEstateListing\",\"@id\":\"https://www.immobilienscout24.at/expose/69fd592474ad1b054f4b8814\",\"name\":\"Moderne 4-Zimmer Neubauwohnung mit West-Loggia in Stammersdorf – Hochwertiges Wohnen mit Stil\",\"url\":\"https://www.immobilienscout24.at/expose/69fd592474ad1b054f4b8814\",\"image\":\"https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&id=012.0015I00000SMCEc-1778217325-d6ff2228d8e34d8285e52f31ee66603b\",\"datePosted\":\"2026-05-08T03:31:48.523Z\",\"floorSize\":{\"@type\":\"QuantitativeValue\",\"value\":103.72,\"unitCode\":\"MTK\"},\"numberOfRooms\":4,\"address\":{\"@type\":\"PostalAddress\",\"addressLocality\":\"Wien\",\"addressRegion\":\"Wien\",\"postalCode\":\"1210\",\"addressCountry\":\"AT\"},\"provider\":{\"@type\":\"RealEstateAgent\",\"@id\":\"https://www.immobilienscout24.at/anbieter/rimmo-prime-vermittlungs-gmbh-012.0015I00000SMCEc/\",\"name\":\"Gödel Kevin\",\"url\":\"https://www.immobilienscout24.at/anbieter/rimmo-prime-vermittlungs-gmbh-012.0015I00000SMCEc/\",\"image\":\"https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?id=dbf49eb40e55420f8473891006cc2f7b\",\"telephone\":\"+436644128427\"}}]}"
+    },
+    "seoMetaTags({\"exposeId\":\"69fd592474ad1b054f4b8814\"})": "<title>Neu (08.05.): Moderne 4-Zimmer Neubauwohnung mit West-Loggia in Stammersdorf – Hochwertiges Wohnen mit Stil</title><meta name=\"description\" content=\"Wohnung (Miete): 4 Zimmer - 104 m² - 1210 - Wien - bei ImmoScout24\"/><meta name=\"og:title\" content=\"Neu (08.05.): Moderne 4-Zimmer Neubauwohnung mit West-Loggia in Stammersdorf – Hochwertiges Wohnen mit Stil\"/><meta name=\"og:description\" content=\"Wohnung (Miete): 4 Zimmer - 104 m² - 1210 - Wien - bei ImmoScout24\"/><meta name=\"og:image\" content=\"https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&amp;id=012.0015I00000SMCEc-1778217325-d6ff2228d8e34d8285e52f31ee66603b\"/><meta name=\"robots\" content=\"index, follow, max-image-preview:large\"/><link rel=\"canonical\" href=\"https://www.immobilienscout24.at/expose/69fd592474ad1b054f4b8814\"/><link rel=\"preload\" as=\"image\" media=\"(max-width: 767px)\" href=\"https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&amp;id=012.0015I00000SMCEc-1778217325-d6ff2228d8e34d8285e52f31ee66603b\" imageSrcSet=\"https://pictures.immobilienscout24.de/dims3/S3/quality/80/legacy_thumbnail/786x442.125/format/webp/https://s3-eu-west-1.amazonaws.com/prod.www.immobilienscout24.at/012.0015I00000SMCEc-1778217325-d6ff2228d8e34d8285e52f31ee66603b 1x, https://pictures.immobilienscout24.de/dims3/S3/quality/80/legacy_thumbnail/1572x884.25/format/webp/https://s3-eu-west-1.amazonaws.com/prod.www.immobilienscout24.at/012.0015I00000SMCEc-1778217325-d6ff2228d8e34d8285e52f31ee66603b 2x\"/><link rel=\"preload\" as=\"image\" media=\"(min-width: 768px) and (max-width: 1023px)\" href=\"https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&amp;id=012.0015I00000SMCEc-1778217325-d6ff2228d8e34d8285e52f31ee66603b\" imageSrcSet=\"https://pictures.immobilienscout24.de/dims3/S3/quality/80/legacy_thumbnail/1023x577.966/format/webp/https://s3-eu-west-1.amazonaws.com/prod.www.immobilienscout24.at/012.0015I00000SMCEc-1778217325-d6ff2228d8e34d8285e52f31ee66603b 1x, https://pictures.immobilienscout24.de/dims3/S3/quality/80/legacy_thumbnail/2046x1155.932/format/webp/https://s3-eu-west-1.amazonaws.com/prod.www.immobilienscout24.at/012.0015I00000SMCEc-1778217325-d6ff2228d8e34d8285e52f31ee66603b 2x\"/><link rel=\"preload\" as=\"image\" media=\"(min-width: 1024px)\" href=\"https://pictures.immobilienscout24.de/prod.www.immobilienscout24.at/pictureserver/loadPicture?q=70&amp;id=012.0015I00000SMCEc-1778217325-d6ff2228d8e34d8285e52f31ee66603b\" imageSrcSet=\"https://pictures.immobilienscout24.de/dims3/S3/quality/80/legacy_thumbnail/806x455.367/format/webp/https://s3-eu-west-1.amazonaws.com/prod.www.immobilienscout24.at/012.0015I00000SMCEc-1778217325-d6ff2228d8e34d8285e52f31ee66603b 1x, https://pictures.immobilienscout24.de/dims3/S3/quality/80/legacy_thumbnail/1612x910.734/format/webp/https://s3-eu-west-1.amazonaws.com/prod.www.immobilienscout24.at/012.0015I00000SMCEc-1778217325-d6ff2228d8e34d8285e52f31ee66603b 2x\"/>"
+  }
+}

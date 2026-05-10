@@ -1,0 +1,38 @@
+{
+  "config": {
+    "appStores": {
+      "iOS": "itms-apps://itunes.apple.com/at/app/immobilienscout24-immobilien-suche/id1207863676?mt=8",
+      "android": "https://play.google.com/store/apps/details?id=at.is24.android"
+    },
+    "appUrl": "https://www.immobilienscout24.at",
+    "environment": "pro",
+    "googleMapsKey": "AIzaSyDNXbkkG25VzM2GYaZBpxQonLhYIP1SSRw",
+    "osa": {
+      "S24_OSA": {
+        "config": {
+          "loggingCat": [],
+          "requiredAsyncLoadedMiddlewares": [
+            "apsMiddleware",
+            "openWrapMiddleware"
+          ],
+          "cookieConsentRequired": true,
+          "stickyPosition": 0
+        },
+        "openWrapConfig": {
+          "publisherId": "167464",
+          "profileId": "19253"
+        }
+      }
+    },
+    "release": "expose:main_1647",
+    "shortlistUrl": "https://www.immobilienscout24.at/api/uss",
+    "tealiumUrl": "https://tracking.immobilienscout24.at/immobilienscout/is24-at/tr.js?initialPageView=false&cP--countername=is24.at.search.expose"
+  },
+  "exposeId": "69fd592474ad1b054f4b8814",
+  "user": {
+    "isLoggedIn": false
+  },
+  "browser": "Chrome",
+  "deviceWidth": 1440,
+  "httpStatus": 200
+}
