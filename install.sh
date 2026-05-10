@@ -118,11 +118,8 @@ install_ollama() {
     if command -v ollama >/dev/null 2>&1; then
         log_info "Ollama already installed ($(ollama --version 2>/dev/null || echo unknown version))."
     else
-        # zstd is required by the Ollama installer; ensure it's present
-        if ! command -v zstd >/dev/null 2>&1; then
-            log_info "Installing zstd (required by Ollama installer)..."
-            apt-get install -y --no-install-recommends zstd
-        fi
+        # zstd is required by the Ollama installer (idempotent if already installed)
+        apt-get install -y --no-install-recommends zstd
         log_info "Downloading Ollama installer..."
         curl -fsSL https://ollama.com/install.sh | sh
         log_ok "Ollama installed."
