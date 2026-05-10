@@ -226,9 +226,11 @@ def ai_settings():
         {"name": "llama3.2:3b",   "speed": "~90s",  "quality": "Better",    "note": "Familiar arch, slower"},
         {"name": "gemma3:1b",     "speed": "~15s",  "quality": "OK",        "note": "Very fast, weaker German"},
     ]
+    import re as _re
     for m in recommended:
         m["installed"] = m["name"] in available_names
         m["pull_status"] = get_pull_job_status(m["name"]) if not m["installed"] else None
+        m["job_id"] = f"ollama-pull-{_re.sub(r'[^a-zA-Z0-9_-]', '-', m['name'])}"
 
     return render_template(
         "settings/ai.html",

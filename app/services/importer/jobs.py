@@ -157,12 +157,18 @@ def llm_enhance_task(apartment_id: int) -> None:
         logger.info("LLM enhance done for apartment %s", apartment_id)
 
 
+def _pull_job_id(model_name: str) -> str:
+    import re
+    safe = re.sub(r'[^a-zA-Z0-9_-]', '-', model_name)
+    return f"ollama-pull-{safe}"
+
+
 def enqueue_ollama_pull(model_name: str) -> None:
     """Enqueue an ollama pull job. Uses a deterministic job ID so the same model
     can't be queued twice simultaneously."""
     try:
         q = _get_queue()
-        job_id = f"ollama-pull-{model_name.replace(':', '-').replace('/', '-')}"
+        job_id = _pull_job_id(model_name)
         from rq.job import Job as _Job
         redis = Redis.from_url(current_app.config["REDIS_URL"])
         try:
@@ -189,7 +195,17 @@ def get_pull_job_status(model_name: str) -> str | None:
     """Return 'queued', 'started', 'finished', 'failed', or None (not found)."""
     try:
         redis = Redis.from_url(current_app.config["REDIS_URL"])
-        job_id = f"ollama-pull-{model_name.replace(':', '-').replace('/', '-')}"
+        from rq.job import Job as _Job
+        job = _Job.fetch(_pull_job_id(model_name), connection=redis)
+        return str(job.get_status())
+    except Exception:
+        return None
+
+
+def get_rq_job_status(job_id: str) -> str | None:
+    """Return status of any RQ job by ID, or None if not found."""
+    try:
+        redis = Redis.from_url(current_app.config["REDIS_URL"])
         from rq.job import Job as _Job
         job = _Job.fetch(job_id, connection=redis)
         return str(job.get_status())

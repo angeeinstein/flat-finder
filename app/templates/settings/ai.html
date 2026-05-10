@@ -78,7 +78,8 @@
           </thead>
           <tbody>
             {% for m in recommended_models %}
-            <tr {% if m.name == current_model %}class="table-primary"{% endif %}>
+            <tr {% if m.name == current_model %}class="table-primary"{% endif %}
+                data-model="{{ m.name }}" data-job-id="{{ m.job_id }}">
               <td>
                 <code class="fw-medium">{{ m.name }}</code>
                 {% if m.name == current_model %}<span class="badge bg-primary ms-1">active</span>{% endif %}
@@ -86,22 +87,22 @@
               </td>
               <td class="text-muted small">{{ m.speed }}</td>
               <td class="text-muted small">{{ m.quality }}</td>
-              <td class="text-end">
+              <td class="text-end pull-action-cell">
                 {% if m.installed %}
                   <span class="text-success small"><i class="bi bi-check-circle-fill"></i> Installed</span>
                 {% elif m.pull_status in ('queued', 'started') %}
-                  <span class="text-primary small">
+                  <span class="pull-spinner text-primary small">
                     <span class="spinner-border spinner-border-sm"></span> Pulling…
                   </span>
                 {% elif m.pull_status == 'failed' %}
-                  <span class="text-danger small me-2"><i class="bi bi-x-circle"></i> Failed</span>
+                  <span class="text-danger small me-2 pull-failed"><i class="bi bi-x-circle"></i> Failed</span>
                   <form method="post" action="{{ url_for('settings.pull_model') }}" class="d-inline">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="model_name" value="{{ m.name }}">
                     <button class="btn btn-outline-danger btn-sm py-0">Retry</button>
                   </form>
                 {% else %}
-                  <form method="post" action="{{ url_for('settings.pull_model') }}" class="d-inline">
+                  <form method="post" action="{{ url_for('settings.pull_model') }}" class="d-inline pull-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="model_name" value="{{ m.name }}">
                     <button class="btn btn-outline-secondary btn-sm py-0">
@@ -183,4 +184,67 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const rows = document.querySelectorAll('tr[data-job-id]');
+  if (!rows.length) return;
+
+  const polling = new Map();
+
+  function updateRow(row, status) {
+    const cell = row.querySelector('.pull-action-cell');
+    if (!cell) return;
+    const model = row.dataset.model;
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+    const pullUrl = {{ url_for('settings.pull_model')|tojson }};
+
+    if (status === 'queued' || status === 'started') {
+      if (!cell.querySelector('.pull-spinner')) {
+        cell.innerHTML = `<span class="pull-spinner text-primary small">
+          <span class="spinner-border spinner-border-sm"></span> Pulling…</span>`;
+      }
+    } else if (status === 'finished') {
+      cell.innerHTML = `<span class="text-success small"><i class="bi bi-check-circle-fill"></i> Installed</span>`;
+      stopPolling(row.dataset.jobId);
+    } else if (status === 'failed') {
+      cell.innerHTML = `<span class="text-danger small me-2"><i class="bi bi-x-circle"></i> Failed</span>
+        <form method="post" action="${pullUrl}" class="d-inline">
+          <input type="hidden" name="csrf_token" value="${csrf}">
+          <input type="hidden" name="model_name" value="${model}">
+          <button class="btn btn-outline-danger btn-sm py-0">Retry</button>
+        </form>`;
+      stopPolling(row.dataset.jobId);
+    }
+  }
+
+  function stopPolling(jobId) {
+    if (polling.has(jobId)) {
+      clearInterval(polling.get(jobId));
+      polling.delete(jobId);
+    }
+  }
+
+  function startPolling(row) {
+    const jobId = row.dataset.jobId;
+    if (polling.has(jobId)) return;
+    const id = setInterval(() => {
+      fetch('/api/rq-status/' + jobId)
+        .then(r => r.json())
+        .then(d => updateRow(row, d.status))
+        .catch(() => {});
+    }, 3000);
+    polling.set(jobId, id);
+  }
+
+  rows.forEach(row => {
+    const cell = row.querySelector('.pull-action-cell');
+    if (cell && cell.querySelector('.pull-spinner')) {
+      startPolling(row);
+    }
+  });
+})();
+</script>
 {% endblock %}

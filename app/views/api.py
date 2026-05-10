@@ -382,6 +382,26 @@ def geocode_one():
     return jsonify({"found": True, "lat": lat, "lng": lng})
 
 
+@bp.route("/rq-status/<path:job_id>")
+def rq_job_status(job_id: str):
+    """Return status of any RQ job by its job_id string."""
+    from app.services.importer.jobs import get_rq_job_status
+    status = get_rq_job_status(job_id)
+    return jsonify({"job_id": job_id, "status": status})
+
+
+@bp.route("/apartments/<int:apt_id>/llm-status")
+def llm_status(apt_id: int):
+    """Return whether an LLM enhance job is currently queued/running for this apartment."""
+    apt = db.session.get(Apartment, apt_id)
+    if not apt:
+        abort(404)
+    g.ctx.check_apartment(apt)
+    from app.services.importer.jobs import get_rq_job_status
+    status = get_rq_job_status(f"llm-enhance-{apt_id}")
+    return jsonify({"apt_id": apt_id, "status": status})
+
+
 @bp.route("/travel-times/<int:apt_id>/recalculate", methods=["POST"])
 def recalc_travel(apt_id: int):
     apt = db.session.get(Apartment, apt_id)

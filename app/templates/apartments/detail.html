@@ -97,7 +97,15 @@
     </div>
     {% endif %}
 
-    <!-- AI summary -->
+    <!-- AI summary / LLM status indicator -->
+    <div id="llm-indicator" class="card border-0 bg-body-secondary mb-3 d-none">
+      <div class="card-body py-2">
+        <div class="d-flex gap-2 align-items-center">
+          <span class="spinner-border spinner-border-sm text-primary flex-shrink-0"></span>
+          <span class="small text-muted">AI is analysing this listing in the background…</span>
+        </div>
+      </div>
+    </div>
     {% if apt.ai_summary %}
     <div class="card border-0 bg-body-secondary mb-3">
       <div class="card-body py-3">
@@ -498,5 +506,29 @@ document.querySelectorAll('.remove-tag').forEach(a => {
     } catch (err) { flatFinder.showToast(err.message, 'danger'); }
   });
 });
+</script>
+<script>
+(function () {
+  const indicator = document.getElementById('llm-indicator');
+  if (!indicator) return;
+  const aptId = {{ apt.id }};
+  const url = '/api/apartments/' + aptId + '/llm-status';
+  let timer = null;
+
+  function poll() {
+    fetch(url).then(r => r.json()).then(data => {
+      const active = data.status === 'queued' || data.status === 'started';
+      indicator.classList.toggle('d-none', !active);
+      if (active) {
+        timer = setTimeout(poll, 4000);
+      } else if (data.status === 'finished') {
+        // Reload page so newly extracted fields appear
+        location.reload();
+      }
+    }).catch(() => {});
+  }
+
+  poll();
+})();
 </script>
 {% endblock %}
