@@ -141,11 +141,26 @@
 
         {% set amenities = [('Balcony', apt.has_balcony),('Terrace',apt.has_terrace),('Garden',apt.has_garden),('Parking',apt.has_parking),('Cellar',apt.has_cellar),('Furnished',apt.is_furnished)] %}
         {% set any_amenity = amenities | selectattr(1) | list %}
-        {% if any_amenity %}
+        {% if any_amenity or apt.pets_allowed is not none or apt.internet_included is not none or apt.is_private_landlord is not none %}
           <div class="d-flex flex-wrap gap-2 mb-3">
             {% for label, value in amenities %}
               {% if value %}<span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-check-lg"></i> {{ label }}</span>{% endif %}
             {% endfor %}
+            {% if apt.pets_allowed is not none %}
+              {% if apt.pets_allowed %}
+                <span class="badge bg-success-subtle text-success-emphasis" title="AI-extracted"><i class="bi bi-check-lg"></i> Pets allowed</span>
+              {% else %}
+                <span class="badge bg-danger-subtle text-danger-emphasis" title="AI-extracted"><i class="bi bi-x-lg"></i> No pets</span>
+              {% endif %}
+            {% endif %}
+            {% if apt.internet_included %}
+              <span class="badge bg-success-subtle text-success-emphasis" title="AI-extracted"><i class="bi bi-wifi"></i> Internet incl.</span>
+            {% endif %}
+            {% if apt.is_private_landlord is not none %}
+              <span class="badge bg-secondary-subtle text-secondary-emphasis" title="AI-extracted">
+                <i class="bi bi-person"></i> {{ 'Private landlord' if apt.is_private_landlord else 'Agency' }}
+              </span>
+            {% endif %}
           </div>
         {% endif %}
 
@@ -166,6 +181,7 @@
             <tr><th>Building / heating</th><td>{{ apt.building_type or '–' }}{% if apt.heating_type %} · {{ apt.heating_type }}{% endif %}</td></tr>
             <tr><th>Energy</th><td>{{ apt.energy_cert_info or '–' }}</td></tr>
             <tr><th>Lease</th><td>{% if apt.lease_duration_limited %}Limited{% if apt.lease_duration_text %} ({{ apt.lease_duration_text }}){% endif %}{% else %}Unlimited{% endif %}</td></tr>
+            {% if apt.key_money %}<tr><th>Ablöse (key money)</th><td>€{{ '%.0f'|format(apt.key_money) }}</td></tr>{% endif %}
             <tr><th>Contact</th><td>{{ apt.contact_name or '–' }}{% if apt.contact_info %} · {{ apt.contact_info }}{% endif %}</td></tr>
           </tbody>
         </table>

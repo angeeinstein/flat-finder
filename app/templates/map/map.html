@@ -3,35 +3,99 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-<style>
-  .map-popup-thumb { width: 200px; aspect-ratio: 4/3; object-fit: cover; border-radius: 6px; }
-</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 {% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+{# ---- top controls bar ---- #}
+<div class="d-flex flex-wrap gap-2 align-items-center mb-2">
   <h1 class="h4 mb-0"><i class="bi bi-map"></i> Map</h1>
-  <div class="ms-auto d-flex gap-2 flex-wrap">
-    <select id="color-by" class="form-select form-select-sm" style="width:160px">
+  <div class="ms-auto d-flex gap-2 flex-wrap align-items-center">
+    <button class="btn btn-outline-secondary btn-sm" id="filter-toggle" title="Toggle filters">
+      <i class="bi bi-sliders"></i> Filters
+      <span class="badge bg-primary ms-1 d-none" id="filter-badge">0</span>
+    </button>
+    <select id="color-by" class="form-select form-select-sm" style="width:170px">
       <option value="score">Color: score</option>
       <option value="price">Color: price</option>
-      <option value="status">Color: status</option>
       <option value="travel_time">Color: travel time</option>
+      <option value="status">Color: status</option>
     </select>
-    <select id="target" class="form-select form-select-sm" style="width:200px">
+    <select id="target" class="form-select form-select-sm" style="width:190px">
       <option value="">— travel target —</option>
       {% for t in targets %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
     </select>
     <select id="mode" class="form-select form-select-sm" style="width:120px">
-      <option value="car">car</option><option value="walking">walking</option>
-      <option value="bicycle">bicycle</option><option value="transit">transit</option>
+      <option value="car">Car</option>
+      <option value="walking">Walking</option>
+      <option value="bicycle">Bicycle</option>
+      <option value="transit">Transit</option>
     </select>
   </div>
 </div>
-<div id="map"></div>
+
+{# ---- sidebar + map layout ---- #}
+<div class="map-wrap">
+  <div class="map-sidebar" id="map-sidebar">
+    <div class="map-filter-section">
+      <div class="map-filter-label">Max total rent (€/mo)</div>
+      <input type="number" id="f-max-price" class="form-control form-control-sm"
+             placeholder="any" min="0" step="50">
+    </div>
+
+    <div class="map-filter-section">
+      <div class="map-filter-label">Min rooms</div>
+      <input type="number" id="f-min-rooms" class="form-control form-control-sm"
+             placeholder="any" min="0" step="0.5">
+    </div>
+
+    <div class="map-filter-section">
+      <div class="map-filter-label">Min area (m²)</div>
+      <input type="number" id="f-min-area" class="form-control form-control-sm"
+             placeholder="any" min="0" step="5">
+    </div>
+
+    <div class="map-filter-section" id="travel-wrap" style="display:none">
+      <div class="map-filter-label d-flex justify-content-between align-items-center">
+        <span>Max travel time</span>
+        <span class="map-range-output" id="travel-output">any</span>
+      </div>
+      <input type="range" id="f-max-travel" class="form-range" min="0" max="90" step="5" value="0">
+      <div class="d-flex justify-content-between" style="font-size:.75rem;color:var(--ff-muted)">
+        <span>any</span><span>90 min</span>
+      </div>
+    </div>
+
+    <div class="map-filter-section">
+      <div class="map-filter-label">Amenities</div>
+      <div class="form-check mb-1">
+        <input class="form-check-input" type="checkbox" id="f-balcony">
+        <label class="form-check-label small" for="f-balcony">Outdoor space</label>
+      </div>
+      <div class="form-check mb-1">
+        <input class="form-check-input" type="checkbox" id="f-parking">
+        <label class="form-check-label small" for="f-parking">Parking</label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="f-online">
+        <label class="form-check-label small" for="f-online">Online only</label>
+      </div>
+    </div>
+
+    <button class="btn btn-outline-secondary btn-sm w-100 mb-2" id="reset-filters">
+      <i class="bi bi-x-circle"></i> Reset
+    </button>
+
+    <div class="small text-muted text-center" id="filter-count"></div>
+  </div>
+
+  <div id="map"></div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 {% endblock %}

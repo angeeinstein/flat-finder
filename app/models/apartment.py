@@ -61,6 +61,12 @@ class Apartment(db.Model):
     lease_duration_limited = db.Column(db.Boolean, nullable=True)
     lease_duration_text = db.Column(db.String(255), nullable=True)
 
+    # LLM-extracted extras (filled in by Ollama when available; nullable)
+    pets_allowed = db.Column(db.Boolean, nullable=True)
+    internet_included = db.Column(db.Boolean, nullable=True)
+    is_private_landlord = db.Column(db.Boolean, nullable=True)
+    key_money = db.Column(db.Numeric(10, 2), nullable=True)
+
     # Contact
     contact_name = db.Column(db.String(255), nullable=True)
     contact_info = db.Column(db.String(500), nullable=True)

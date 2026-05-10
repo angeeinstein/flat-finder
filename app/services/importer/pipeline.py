@@ -18,7 +18,6 @@ from app.models.listing import (
     ListingSource,
 )
 from app.models.location import TargetAddress
-from sqlalchemy import and_
 from app.services.geocoding import geocode
 from app.services.image import save_image
 from app.services.importer import get_importer_for
@@ -203,6 +202,43 @@ def _record_changes(apt: Apartment, changes: dict, detected_by: str) -> None:
         ))
 
 
+def _apply_llm_fields(apt: Apartment, fields: dict) -> None:
+    """Merge LLM-extracted fields into apt — only fills slots that are still None."""
+    bool_fields = {
+        "pets_allowed":      "pets_allowed",
+        "internet_included": "internet_included",
+        "is_private_landlord": "is_private_landlord",
+        "lease_is_limited":  "lease_duration_limited",
+    }
+    for src, dst in bool_fields.items():
+        val = fields.get(src)
+        if val is not None and getattr(apt, dst, None) is None:
+            try:
+                setattr(apt, dst, bool(val))
+            except Exception:
+                pass
+
+    if fields.get("floor") and not apt.floor:
+        try:
+            apt.floor = str(fields["floor"])[:64]
+        except Exception:
+            pass
+
+    km_val = fields.get("key_money")
+    if km_val is not None and apt.key_money is None:
+        try:
+            apt.key_money = float(km_val)
+        except Exception:
+            pass
+
+    if fields.get("available_from") and apt.available_from is None:
+        try:
+            from datetime import date as _date
+            apt.available_from = _date.fromisoformat(str(fields["available_from"]))
+        except Exception:
+            pass
+
+
 def run_import_job(job_id: int) -> None:
     """Execute an import job. Designed to be called from RQ worker or inline."""
     from app.services.duplicate import find_duplicate_candidates
@@ -281,6 +317,18 @@ def run_import_job(job_id: int) -> None:
             db.session.add(source)
             db.session.flush()
             new_apartment = True
+
+        # LLM enhancement — runs on every import (new + refresh) to fill gaps.
+        # Completely optional: any error is silently swallowed; description is never modified.
+        try:
+            from app.services.llm import extract_fields as _llm_extract
+            desc = apt.description or result.text_snapshot or ""
+            if desc.strip():
+                llm_data = _llm_extract(desc)
+                if llm_data:
+                    _apply_llm_fields(apt, llm_data)
+        except Exception:
+            pass
 
         # Snapshot
         _save_snapshot(apt.id, source.id, html, result.text_snapshot)
