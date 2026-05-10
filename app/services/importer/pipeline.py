@@ -220,9 +220,13 @@ def run_import_job(job_id: int) -> None:
 
         max_size = current_app.config.get("MAX_IMPORT_DOWNLOAD_SIZE_MB", 20) * 1024 * 1024
         timeout = current_app.config.get("IMPORT_HTTP_TIMEOUT", 15)
-        user_agent = current_app.config.get("NOMINATIM_USER_AGENT", "flat-finder/1.0")
+        import_ua = current_app.config.get(
+            "IMPORT_USER_AGENT",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        )
 
-        resp = safe_get(url, timeout=timeout, max_size_bytes=max_size, user_agent=user_agent)
+        resp = safe_get(url, timeout=timeout, max_size_bytes=max_size, user_agent=import_ua)
         if resp.status_code != 200:
             raise RuntimeError(f"Source returned HTTP {resp.status_code}")
         html = resp.text

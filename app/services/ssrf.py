@@ -87,7 +87,8 @@ def validate_import_url(url: str) -> str:
 
 def safe_get(url: str, *, timeout: int = 15, max_size_bytes: int = 20 * 1024 * 1024,
              allow_redirects: bool = True, max_redirects: int = 3,
-             user_agent: str = "flat-finder/1.0") -> requests.Response:
+             user_agent: str = "flat-finder/1.0",
+             extra_headers: dict | None = None) -> requests.Response:
     """GET a URL safely. Validates URL, limits redirects and download size."""
     url = validate_import_url(url)
     session = requests.Session()
@@ -95,9 +96,11 @@ def safe_get(url: str, *, timeout: int = 15, max_size_bytes: int = 20 * 1024 * 1
 
     headers = {
         "User-Agent": user_agent,
-        "Accept": "text/html,application/json,application/xhtml+xml;q=0.9,*/*;q=0.5",
-        "Accept-Language": "en,de;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "de-AT,de;q=0.9,en;q=0.8",
     }
+    if extra_headers:
+        headers.update(extra_headers)
 
     # Re-validate after each redirect
     final_url = url

@@ -73,6 +73,14 @@ class BaseConfig:
     NOMINATIM_USER_AGENT = os.environ.get(
         "NOMINATIM_USER_AGENT", "flat-finder/1.0 (admin@example.com)"
     )
+    # User-Agent for fetching listing pages. Many portals (IS24, ImmoWelt, …)
+    # return 401/403 to obvious bots.  Override via IMPORT_USER_AGENT in .env.
+    IMPORT_USER_AGENT = os.environ.get(
+        "IMPORT_USER_AGENT",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36",
+    )
 
     LOGIN_RATE_LIMIT = os.environ.get("LOGIN_RATE_LIMIT", "10 per minute")
     ALLOW_REGISTRATION = os.environ.get("ALLOW_REGISTRATION", "false").lower() == "true"
