@@ -50,7 +50,7 @@ class ApartmentImage(db.Model):
     perceptual_hash = db.Column(db.String(64), nullable=True, index=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     is_broken = db.Column(db.Boolean, nullable=False, default=False)
-    is_floor_plan = db.Column(db.Boolean, nullable=False, default=False)
+    is_floor_plan = db.Column(db.Boolean, nullable=False, default=False, server_default="false")
 
 
 class ApartmentSnapshot(db.Model):
