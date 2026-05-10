@@ -332,17 +332,27 @@ run_flask_cmd() {
 }
 
 # ---------- migrations ----------
+_patch_migration_files() {
+    # PostgreSQL rejects ADD COLUMN ... NOT NULL on tables with existing rows unless
+    # a DEFAULT is supplied.  Alembic auto-generates columns without server_default,
+    # so we patch every migration file before upgrade runs.  Already-correct files
+    # are unaffected (the pattern only matches when server_default is absent).
+    local mdir="$INSTALL_DIR/migrations/versions"
+    [[ -d "$mdir" ]] || return 0
+    find "$mdir" -name "*.py" -exec sed -i \
+        -e "s/sa\.Boolean(), nullable=False/sa.Boolean(), server_default=sa.text('false'), nullable=False/g" \
+        -e "s/sa\.Integer(), nullable=False)/sa.Integer(), server_default=sa.text('0'), nullable=False)/g" \
+        {} \;
+}
+
 run_migrations() {
     log_step "Running database migrations"
     if [[ ! -d "$INSTALL_DIR/migrations" ]]; then
-        sudo -u "$APP_USER" bash -c "cd '$INSTALL_DIR' && \
-            FLASK_APP=wsgi:app set -a && . '$ENV_FILE' && set +a && \
-            '$INSTALL_DIR/venv/bin/flask' db init"
+        run_flask_cmd "db init"
     fi
-    sudo -u "$APP_USER" bash -c "cd '$INSTALL_DIR' && \
-        FLASK_APP=wsgi:app set -a && . '$ENV_FILE' && set +a && \
-        '$INSTALL_DIR/venv/bin/flask' db migrate -m 'auto' 2>/dev/null || true && \
-        '$INSTALL_DIR/venv/bin/flask' db upgrade"
+    run_flask_cmd "db migrate -m 'auto'" 2>/dev/null || true
+    _patch_migration_files
+    run_flask_cmd "db upgrade"
     log_ok "Migrations applied."
 }
 
