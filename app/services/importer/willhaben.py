@@ -102,9 +102,10 @@ class WillhabenImporter(GenericImporter):
             gallery.extend(urls)
 
         if gallery:
-            # Put the willhaben gallery first, then any extras the generic picked up
-            keep = [u for u in result.image_urls if u not in set(gallery)]
-            result.image_urls = (gallery + keep)[:50]
+            # When willhaben publishes an authoritative gallery, replace the
+            # generic-collected URLs entirely — those are mostly low-res variants
+            # of the same images that pollute the results.
+            result.image_urls = gallery[:50]
 
     def _collect_image_urls(self, node: Any, out: list[str], seen: set[str]) -> None:
         if isinstance(node, str):
@@ -120,40 +121,82 @@ class WillhabenImporter(GenericImporter):
                 self._collect_image_urls(v, out, seen)
 
     def _extract_willhaben_address(self, data: Any, result: ImporterResult) -> None:
-        """Augment address from the advert state if JSON-LD didn't fill it."""
-        # Willhaben puts an "attributes" array of {name, values} entries.
-        attrs_lists: list[Any] = []
-        _walk(data, "attributes", attrs_lists)
-        attrs: dict[str, str] = {}
-        for al in attrs_lists:
-            if isinstance(al, dict):
-                items = al.get("attribute") or al.get("attributes") or []
-            elif isinstance(al, list):
-                items = al
-            else:
-                continue
-            for it in items:
-                if not isinstance(it, dict):
-                    continue
-                name = it.get("name") or it.get("key")
-                values = it.get("values") or it.get("value")
-                if not name:
-                    continue
-                if isinstance(values, list) and values:
-                    attrs[name] = str(values[0])
-                elif isinstance(values, str):
-                    attrs[name] = values
+        """Augment address from the advert state if JSON-LD didn't fill it.
 
-        # Common willhaben address attribute names (slightly different across types)
-        street = attrs.get("ADDRESS") or attrs.get("ADDRESS_2") or attrs.get("STREET")
-        postal = attrs.get("POSTCODE") or attrs.get("ZIP_CODE") or attrs.get("ZIP")
-        city = attrs.get("LOCATION") or attrs.get("CITY") or attrs.get("STATE")
-        district = attrs.get("DISTRICT") or attrs.get("DISTRICT_LEVEL_1")
+        Willhaben encodes ad fields as a flat list of `{name, values}` records under
+        keys like `attributes`, `attribute`, or `extraValues`. Attribute names vary by
+        category (real estate, motor, jobs) so we collect every name/value pair we
+        can reach and look them up by a generous list of synonyms.
+        """
+        attrs = self._collect_willhaben_attrs(data)
+        if not attrs:
+            return
 
-        if street and not result.fields.get("address"):
-            pieces = [p for p in (street, " ".join(p for p in (postal, city) if p), district) if p]
-            result.fields["address"] = ", ".join(pieces)[:500]
-        if postal and not result.fields.get("postal_code"):
+        def first(*keys: str) -> str | None:
+            for k in keys:
+                v = attrs.get(k)
+                if v:
+                    return v
+            return None
+
+        street = first(
+            "ADDRESS", "ADDRESS_2", "STREET", "STREET_NAME",
+            "ESTATE_PREMIUM_HOUSE_NUMBER", "OBJECT_ADDRESS",
+            "ADDRESS_LINE", "REAL_ESTATE_OBJECT_ADDRESS",
+        )
+        postal = first(
+            "POSTCODE", "POST_CODE", "ZIP_CODE", "ZIP",
+            "POSTAL_CODE", "PLZ",
+        )
+        city = first(
+            "LOCATION", "CITY", "TOWN", "ORT",
+            "DISTRICT_OF_VIENNA",
+        )
+        state = first("STATE", "BUNDESLAND", "FEDERAL_STATE")
+        district = first(
+            "DISTRICT", "DISTRICT_LEVEL_1", "DISTRICT_LEVEL_2",
+            "BEZIRK", "STADTTEIL",
+        )
+
+        if not result.fields.get("postal_code") and postal:
             result.fields["postal_code"] = postal
-        if city and not result.fields.get("city"):
+        if not result.fields.get("city") and city:
             result.fields["city"] = city
+
+        if not result.fields.get("address"):
+            line2_bits = [p for p in (postal, city) if p]
+            line2 = " ".join(line2_bits)
+            pieces = [p for p in (street, line2, district or state) if p]
+            if pieces:
+                result.fields["address"] = ", ".join(pieces)[:500]
+
+    def _collect_willhaben_attrs(self, data: Any) -> dict[str, str]:
+        """Walk every dict and harvest {name: value} records (multiple shapes)."""
+        out: dict[str, str] = {}
+
+        def visit(node: Any) -> None:
+            if isinstance(node, dict):
+                # Shape A: {"name": "POSTCODE", "values": ["1210"]}
+                name = node.get("name")
+                if isinstance(name, str) and name.isupper():
+                    values = node.get("values") or node.get("value")
+                    if isinstance(values, list) and values:
+                        v = values[0]
+                        if isinstance(v, (str, int)):
+                            out.setdefault(name, str(v))
+                    elif isinstance(values, (str, int)):
+                        out.setdefault(name, str(values))
+                # Shape B: {"key": "POSTCODE", "value": "1210"}
+                key = node.get("key")
+                if isinstance(key, str) and key.isupper():
+                    val = node.get("value") or node.get("formattedValue")
+                    if isinstance(val, (str, int)):
+                        out.setdefault(key, str(val))
+                for v in node.values():
+                    visit(v)
+            elif isinstance(node, list):
+                for v in node:
+                    visit(v)
+
+        visit(data)
+        return out

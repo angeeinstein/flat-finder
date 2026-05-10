@@ -14,6 +14,10 @@ from app.services.importer.base import ImporterBase, ImporterResult
 PRICE_RE = re.compile(r"(?P<num>[\d.,]+)\s*(?:€|EUR)", re.IGNORECASE)
 AREA_RE = re.compile(r"(?P<num>\d{1,4}(?:[.,]\d+)?)\s*m²", re.IGNORECASE)
 ROOMS_RE = re.compile(r"(?P<num>\d{1,2}(?:[.,]\d+)?)\s*(?:Zimmer|rooms?)", re.IGNORECASE)
+# DACH postal code + city ("1210 Wien", "10115 Berlin", "8001 Zürich")
+POSTAL_CITY_RE = re.compile(r"\b(?P<postal>\d{4,5})\s+(?P<city>[A-ZÄÖÜ][\wäöüß\.\- ]{2,40}?)(?=[,\.\(\)/]|$|\s{2,})")
+# A street: "Word(s) <number>" e.g. "Mariahilfer Straße 100", "Prager Straße 105 + 109"
+STREET_RE = re.compile(r"\b([A-ZÄÖÜ][\wäöüß\.\-]+(?:[ -][\wäöüß\.\-]+){0,4}\s*\d{1,4}(?:\s*[+\-/]\s*\d{1,4})?[a-zA-Z]?)\b")
 
 
 # URL fragments that almost certainly indicate non-property assets
@@ -299,6 +303,31 @@ class GenericImporter(ImporterBase):
             m = ROOMS_RE.search(text_blob)
             if m:
                 result.fields["rooms"] = _to_float(m.group("num"))
+
+        # Address fallback: scan body text for "<postal> <city>" near a street.
+        if not result.fields.get("postal_code") or not result.fields.get("city"):
+            m = POSTAL_CITY_RE.search(text_blob)
+            if m:
+                result.fields.setdefault("postal_code", m.group("postal"))
+                result.fields.setdefault("city", m.group("city").strip())
+        if not result.fields.get("address") and (
+            result.fields.get("postal_code") or result.fields.get("city")
+        ):
+            # Try to find a street on the same line as the postal+city text.
+            m = POSTAL_CITY_RE.search(text_blob)
+            street = None
+            if m:
+                window = text_blob[max(0, m.start() - 120): m.start()]
+                sm = STREET_RE.search(window)
+                if sm:
+                    street = sm.group(1).strip()
+            line2_bits = [
+                p for p in (result.fields.get("postal_code"), result.fields.get("city")) if p
+            ]
+            line2 = " ".join(line2_bits)
+            pieces = [p for p in (street, line2) if p]
+            if pieces:
+                result.fields["address"] = ", ".join(pieces)[:500]
 
         # ----- OpenGraph images -----
         for og_url in _meta_all(soup, "og:image") + _meta_all(soup, "og:image:url") + _meta_all(soup, "twitter:image"):

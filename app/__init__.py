@@ -105,11 +105,20 @@ def _register_cli(app: Flask) -> None:
 def _register_template_globals(app: Flask) -> None:
     from app.models.user import User
 
+    # Compute a version string from the static CSS file mtime so browsers
+    # always pick up the latest styles after a deploy.
+    css_path = Path(app.static_folder or "app/static") / "css" / "app.css"
+    try:
+        static_version = str(int(css_path.stat().st_mtime))
+    except OSError:
+        static_version = "0"
+
     @app.context_processor
     def inject_globals():
         return {
             "app_name": "flat-finder",
             "any_admin_exists": _any_admin_exists,
+            "static_version": static_version,
         }
 
     def _any_admin_exists() -> bool:

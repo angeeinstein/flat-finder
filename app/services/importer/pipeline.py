@@ -81,14 +81,46 @@ def _save_snapshot(apt_id: int, source_id: int | None, html: str, text: str | No
     db.session.add(snap)
 
 
+MIN_IMAGE_WIDTH = 500
+MIN_IMAGE_HEIGHT = 350
+MIN_IMAGE_BYTES = 12 * 1024  # 12 KB — anything smaller is almost certainly an icon
+PHASH_MIN_DISTANCE = 4  # Hamming distance below this means "near-duplicate"
+
+
+def _phash_close(new_hash: str | None, existing: list[str]) -> bool:
+    if not new_hash:
+        return False
+    try:
+        import imagehash
+    except ImportError:
+        return False
+    try:
+        new = imagehash.hex_to_hash(new_hash)
+    except Exception:
+        return False
+    for h in existing:
+        if not h:
+            continue
+        try:
+            if abs(new - imagehash.hex_to_hash(h)) <= PHASH_MIN_DISTANCE:
+                return True
+        except Exception:
+            continue
+    return False
+
+
 def _download_images(apt_id: int, urls: list[str]) -> int:
     user_agent = current_app.config.get("NOMINATIM_USER_AGENT", "flat-finder/1.0")
     max_size = current_app.config.get("MAX_IMAGE_DOWNLOAD_SIZE_MB", 10) * 1024 * 1024
     saved = 0
+    saved_hashes: list[str] = []
     for url in urls:
         try:
             resp = safe_get(url, timeout=15, max_size_bytes=max_size, user_agent=user_agent)
             if resp.status_code != 200 or not resp.content:
+                continue
+            if len(resp.content) < MIN_IMAGE_BYTES:
+                logger.debug("Skipped %s: too small (%d bytes)", url, len(resp.content))
                 continue
             meta = save_image(apt_id, url, resp.content)
         except SSRFError as e:
@@ -97,15 +129,30 @@ def _download_images(apt_id: int, urls: list[str]) -> int:
         except Exception:
             logger.exception("Image download failed: %s", url)
             continue
+
+        w, h = meta.get("width"), meta.get("height")
+        # Reject low-quality variants / thumbnails masquerading as full photos.
+        if w is not None and h is not None and (w < MIN_IMAGE_WIDTH or h < MIN_IMAGE_HEIGHT):
+            logger.debug("Skipped %s: below min size (%sx%s)", url, w, h)
+            continue
+
+        # Reject near-duplicates of images we already saved this batch.
+        phash = meta.get("perceptual_hash")
+        if _phash_close(phash, saved_hashes):
+            logger.debug("Skipped %s: near-duplicate (phash=%s)", url, phash)
+            continue
+        if phash:
+            saved_hashes.append(phash)
+
         db.session.add(ApartmentImage(
             apartment_id=apt_id,
             local_path=meta["local_path"],
             thumbnail_path=meta.get("thumbnail_path"),
             original_url=url,
-            width=meta.get("width"),
-            height=meta.get("height"),
+            width=w,
+            height=h,
             file_size=meta.get("file_size"),
-            perceptual_hash=meta.get("perceptual_hash"),
+            perceptual_hash=phash,
         ))
         saved += 1
     return saved

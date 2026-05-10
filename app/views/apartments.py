@@ -182,16 +182,32 @@ def delete(apt_id: int):
     if not current_user.is_admin and apt.created_by_id != current_user.id:
         abort(403)
 
-    # Remove image files from disk
+    title = apt.title or f"#{apt_id}"
     image_dir = Path(current_app.config["IMAGE_DIR"]) / str(apt_id)
+
+    # Audit *before* the destructive commit so we never lose a record of the action.
+    log_action(
+        "apartment_deleted",
+        target_type="Apartment",
+        target_id=apt_id,
+        details={"title": title},
+        commit=False,
+    )
+
+    try:
+        db.session.delete(apt)
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception("Apartment delete failed for %s", apt_id)
+        flash(f"Could not delete apartment: {exc}", "danger")
+        return redirect(url_for("apartments.detail", apt_id=apt_id))
+
+    # Remove image files from disk only after the DB commit succeeded.
     if image_dir.exists():
         shutil.rmtree(image_dir, ignore_errors=True)
 
-    title = apt.title or f"#{apt_id}"
-    db.session.delete(apt)
-    db.session.commit()
-    log_action("apartment_deleted", target_type="Apartment", target_id=apt_id, details={"title": title})
-    flash(f"Apartment \"{title}\" deleted.", "success")
+    flash(f'Apartment "{title}" deleted.', "success")
     return redirect(url_for("main.dashboard"))
 
 
