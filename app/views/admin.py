@@ -8,13 +8,12 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, u
 from flask_login import current_user, login_required
 
 from app.extensions import db
-from app.forms.admin import AppSettingForm, TargetAddressForm, UserForm
+from app.forms.admin import AppSettingForm, UserForm
 from app.forms.rating import RatingCategoryForm
 from app.models.apartment import Apartment
 from app.models.audit import AuditLog
 from app.models.duplicate import DuplicateCandidate, DuplicateStatus
 from app.models.job import ImportJob, ImportJobStatus
-from app.models.location import TargetAddress
 from app.models.rating import RatingCategory
 from app.models.settings import AppSetting
 from app.models.user import User, UserRole
@@ -42,9 +41,6 @@ def index():
         "apartments": Apartment.query.count(),
         "open_duplicates": DuplicateCandidate.query.filter_by(status=DuplicateStatus.PENDING).count(),
         "failed_jobs": ImportJob.query.filter_by(status=ImportJobStatus.FAILED).count(),
-        "active_targets": TargetAddress.query.filter(
-            TargetAddress.owner_id.is_(None), TargetAddress.team_id.is_(None), TargetAddress.is_active.is_(True)
-        ).count(),
         "active_categories": RatingCategory.query.filter(
             RatingCategory.owner_id.is_(None), RatingCategory.team_id.is_(None), RatingCategory.is_active.is_(True)
         ).count(),
@@ -196,84 +192,6 @@ def rating_category_delete(cat_id: int):
     return redirect(url_for("admin.rating_categories"))
 
 
-# -------------------- global target address defaults (admin-only) --------------------
-
-@bp.route("/target-addresses")
-def target_addresses():
-    """Manage global default target addresses (owner_id=NULL, team_id=NULL)."""
-    targets = TargetAddress.query.filter(
-        TargetAddress.owner_id.is_(None), TargetAddress.team_id.is_(None)
-    ).order_by(TargetAddress.name).all()
-    return render_template("admin/targets.html", targets=targets)
-
-
-@bp.route("/target-addresses/new", methods=["GET", "POST"])
-def target_address_new():
-    form = TargetAddressForm()
-    if form.validate_on_submit():
-        t = TargetAddress(
-            name=form.name.data.strip(),
-            address=form.address.data.strip(),
-            lat=form.lat.data,
-            lng=form.lng.data,
-            is_active=form.is_active.data,
-            owner_id=None, team_id=None,
-        )
-        if t.lat is None or t.lng is None:
-            from app.services.geocoding import geocode
-            coords = geocode(t.address)
-            if coords:
-                t.lat, t.lng = coords
-            else:
-                flash("Could not geocode this address.", "warning")
-        db.session.add(t)
-        db.session.commit()
-        log_action("target_address_created", target_type="TargetAddress", target_id=t.id)
-        flash("Global target address created.", "success")
-        return redirect(url_for("admin.target_addresses"))
-    return render_template("admin/target_edit.html", form=form, target=None)
-
-
-@bp.route("/target-addresses/<int:tid>/edit", methods=["GET", "POST"])
-def target_address_edit(tid: int):
-    t = db.session.get(TargetAddress, tid)
-    if not t:
-        abort(404)
-    form = TargetAddressForm(obj=t)
-    if form.validate_on_submit():
-        addr = form.address.data.strip()
-        addr_changed = (t.address or "") != addr
-        t.name = form.name.data.strip()
-        t.address = addr
-        t.lat = form.lat.data
-        t.lng = form.lng.data
-        t.is_active = form.is_active.data
-        if (t.lat is None or t.lng is None) or addr_changed:
-            from app.services.geocoding import geocode
-            coords = geocode(t.address)
-            if coords:
-                t.lat, t.lng = coords
-            else:
-                flash("Could not geocode this address — coordinates not updated.", "warning")
-        db.session.commit()
-        log_action("target_address_updated", target_type="TargetAddress", target_id=t.id)
-        flash("Target address updated.", "success")
-        return redirect(url_for("admin.target_addresses"))
-    return render_template("admin/target_edit.html", form=form, target=t)
-
-
-@bp.route("/target-addresses/<int:tid>/delete", methods=["POST"])
-def target_address_delete(tid: int):
-    t = db.session.get(TargetAddress, tid)
-    if not t:
-        abort(404)
-    name = t.name
-    db.session.delete(t)
-    db.session.commit()
-    log_action("target_address_deleted", target_type="TargetAddress", target_id=tid,
-               details={"name": name})
-    flash(f"Target '{name}' deleted.", "success")
-    return redirect(url_for("admin.target_addresses"))
 
 
 # -------------------- duplicates --------------------

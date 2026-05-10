@@ -22,11 +22,7 @@ bp = Blueprint("settings", __name__, template_folder="../templates")
 @login_required
 def targets():
     owned = g.ctx.owned_target_query().order_by(TargetAddress.name).all()
-    globals_ = TargetAddress.query.filter(
-        TargetAddress.owner_id.is_(None), TargetAddress.team_id.is_(None),
-        TargetAddress.is_active.is_(True),
-    ).order_by(TargetAddress.name).all()
-    return render_template("settings/targets.html", owned=owned, globals=globals_)
+    return render_template("settings/targets.html", owned=owned)
 
 
 @bp.route("/targets/new", methods=["GET", "POST"])

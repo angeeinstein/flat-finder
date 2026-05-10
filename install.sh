@@ -447,7 +447,8 @@ repair_install() {
             run_migrations
             sudo -u "$APP_USER" bash -c "cd '$INSTALL_DIR' && \
                 FLASK_APP=wsgi:app set -a && . '$ENV_FILE' && set +a && \
-                '$INSTALL_DIR/venv/bin/flask' backfill-owner-id 2>/dev/null || true"
+                '$INSTALL_DIR/venv/bin/flask' backfill-owner-id 2>/dev/null || true && \
+                '$INSTALL_DIR/venv/bin/flask' backfill-targets 2>/dev/null || true"
             setup_systemd
             start_services
             setup_nginx

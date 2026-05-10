@@ -19,7 +19,10 @@
       "Bash(python _test_willhaben.py)",
       "Bash(.venv\\\\Scripts\\\\python _test_willhaben.py)",
       "Bash(venv/Scripts/python _test_willhaben.py)",
-      "Bash(venv/Scripts/python _test_immowelt.py)"
+      "Bash(venv/Scripts/python _test_immowelt.py)",
+      "Bash(Remove-Item \"c:\\\\Users\\\\ichfr\\\\Documents\\\\Projekte\\\\VSCode\\\\flat-finder\\\\app\\\\templates\\\\admin\\\\targets.html\" -ErrorAction SilentlyContinue)",
+      "Bash(Write-Host \"Deleted\")",
+      "Bash(Write-Host \"Not found\")"
     ]
   }
 }

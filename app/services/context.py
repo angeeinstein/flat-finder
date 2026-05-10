@@ -121,27 +121,22 @@ class AppContext:
     # ------------------------------------------------------------------ scoped queries
 
     def target_query(self):
-        """Returns active targets visible in this context: global + context-specific."""
-        from app.models.location import TargetAddress
-        global_filter = and_(TargetAddress.owner_id.is_(None), TargetAddress.team_id.is_(None))
-        if self.team_id is None:
-            ctx_filter = and_(TargetAddress.owner_id == self.user_id, TargetAddress.team_id.is_(None))
-        else:
-            ctx_filter = TargetAddress.team_id == self.team_id
-        return TargetAddress.query.filter(
-            TargetAddress.is_active.is_(True),
-            or_(global_filter, ctx_filter),
-        )
-
-    def owned_target_query(self):
-        """Returns only targets that belong to this context (excludes globals)."""
+        """Returns active targets for this context only. Targets are always private."""
         from app.models.location import TargetAddress
         if self.team_id is None:
             return TargetAddress.query.filter(
+                TargetAddress.is_active.is_(True),
                 TargetAddress.owner_id == self.user_id,
                 TargetAddress.team_id.is_(None),
             )
-        return TargetAddress.query.filter(TargetAddress.team_id == self.team_id)
+        return TargetAddress.query.filter(
+            TargetAddress.is_active.is_(True),
+            TargetAddress.team_id == self.team_id,
+        )
+
+    def owned_target_query(self):
+        """Alias for target_query (targets are always owned by their context)."""
+        return self.target_query()
 
     def category_query(self):
         """Returns active categories visible in this context: global + context-specific."""

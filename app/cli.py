@@ -129,21 +129,22 @@ def register_cli(app: Flask) -> None:
         from app.models.apartment import Apartment
         from app.models.location import TargetAddress
         from app.services.routing import calculate_for_apartment
-        from sqlalchemy import and_, or_
-
         apartments = Apartment.query.filter(Apartment.lat.isnot(None)).all()
-        global_filter = and_(TargetAddress.owner_id.is_(None), TargetAddress.team_id.is_(None))
         n = 0
         for apt in apartments:
             if apt.team_id is not None:
-                ctx_filter = TargetAddress.team_id == apt.team_id
+                targets = TargetAddress.query.filter(
+                    TargetAddress.is_active.is_(True),
+                    TargetAddress.team_id == apt.team_id,
+                ).all()
             elif apt.owner_id is not None:
-                ctx_filter = and_(TargetAddress.owner_id == apt.owner_id, TargetAddress.team_id.is_(None))
+                targets = TargetAddress.query.filter(
+                    TargetAddress.is_active.is_(True),
+                    TargetAddress.owner_id == apt.owner_id,
+                    TargetAddress.team_id.is_(None),
+                ).all()
             else:
-                ctx_filter = db.false()
-            targets = TargetAddress.query.filter(
-                TargetAddress.is_active.is_(True), or_(global_filter, ctx_filter)
-            ).all()
+                targets = []
             for tgt in targets:
                 if tgt.lat is None or tgt.lng is None:
                     continue

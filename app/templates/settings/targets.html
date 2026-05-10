@@ -11,8 +11,7 @@
 </div>
 
 {% if owned %}
-<div class="card shadow-sm mb-4">
-  <div class="card-header fw-semibold">Your targets</div>
+<div class="card shadow-sm">
   <div class="table-responsive">
     <table class="table table-sm align-middle mb-0">
       <thead class="table-light">
@@ -20,7 +19,7 @@
       </thead>
       <tbody>
         {% for t in owned %}
-        <tr>
+        <tr class="{% if not t.is_active %}text-muted{% endif %}">
           <td>{{ t.name }}</td>
           <td class="small text-muted">{{ t.address }}</td>
           <td class="small text-muted">
@@ -42,32 +41,8 @@
   </div>
 </div>
 {% else %}
-<div class="alert alert-info mb-4">
-  No targets yet for this context. <a href="{{ url_for('settings.target_new') }}">Add one</a> or use the global defaults below.
-</div>
-{% endif %}
-
-{% if globals %}
-<div class="card shadow-sm">
-  <div class="card-header fw-semibold text-muted">Global targets <small>(shared, admin-managed)</small></div>
-  <div class="table-responsive">
-    <table class="table table-sm align-middle mb-0">
-      <thead class="table-light">
-        <tr><th>Name</th><th>Address</th><th>Coords</th></tr>
-      </thead>
-      <tbody>
-        {% for t in globals %}
-        <tr>
-          <td>{{ t.name }}</td>
-          <td class="small text-muted">{{ t.address }}</td>
-          <td class="small text-muted">
-            {% if t.lat %}{{ "%.4f"|format(t.lat) }}, {{ "%.4f"|format(t.lng) }}{% else %}–{% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+<div class="alert alert-info">
+  No targets yet. Add places you commute to (work, university, etc.) and travel times will be calculated for each listing.
 </div>
 {% endif %}
 {% endblock %}

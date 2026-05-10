@@ -127,8 +127,10 @@ def _register_template_globals(app: Flask) -> None:
                 user_id=current_user.id
             ).all()
             user_teams = [m.team for m in memberships if m.team]
+        from app.models.settings import AppSetting
+        app_name = AppSetting.get("app_name", "flat-finder") or "flat-finder"
         return {
-            "app_name": "flat-finder",
+            "app_name": app_name,
             "any_admin_exists": _any_admin_exists,
             "static_version": static_version,
             "active_ctx": ctx,
