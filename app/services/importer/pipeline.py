@@ -81,18 +81,18 @@ def _save_snapshot(apt_id: int, source_id: int | None, html: str, text: str | No
     db.session.add(snap)
 
 
-# Minimum thresholds for regular (colour) photos.
-MIN_IMAGE_WIDTH = 320
-MIN_IMAGE_HEIGHT = 200
 MIN_IMAGE_BYTES = 4 * 1024  # 4 KB
-# Floor plans / grayscale diagrams are often smaller and more compressible than
-# room photos, so we use a separate, more lenient threshold for them.
-MIN_FLOOR_PLAN_WIDTH = 150
-MIN_FLOOR_PLAN_HEIGHT = 100
+
+# Size thresholds applied to the SHORT side (min(w,h)) and LONG side (max(w,h))
+# so that portrait-oriented photos pass on the same footing as landscape ones.
+# A 266×400 portrait is a real listing photo; a 100×75 thumbnail is not.
+MIN_SHORT_SIDE = 200   # colour photos: short side >= 200 px
+MIN_LONG_SIDE  = 280   # colour photos: long  side >= 280 px
+# Floor plans / grayscale diagrams: smaller and more compressible than photos.
+MIN_FP_SHORT_SIDE = 80
+MIN_FP_LONG_SIDE  = 100
 # Hamming distance below this counts as "near-duplicate" for colour photos.
-# Grayscale images (floor plans) are exempt from phash dedup because:
-#  a) they have very different hashes from photos, so false-positives are rare,
-#  b) a mostly-white floor plan and a washed-out photo could share a close hash.
+# Grayscale images (floor plans) are exempt — see comment in _download_images.
 PHASH_MIN_DISTANCE = 2
 
 
@@ -142,13 +142,15 @@ def _download_images(apt_id: int, urls: list[str]) -> int:
         w, h = meta.get("width"), meta.get("height")
         is_grayscale = meta.get("is_grayscale", False)
 
-        # Floor plans and line-art diagrams (grayscale) use a lower size threshold
-        # because they are often smaller than room photos but still worth keeping.
-        min_w = MIN_FLOOR_PLAN_WIDTH if is_grayscale else MIN_IMAGE_WIDTH
-        min_h = MIN_FLOOR_PLAN_HEIGHT if is_grayscale else MIN_IMAGE_HEIGHT
-        if w is not None and h is not None and (w < min_w or h < min_h):
-            logger.debug("Skipped %s: below min size (%sx%s)", url, w, h)
-            continue
+        # Use short/long side so portrait images pass on the same footing as landscape.
+        if w is not None and h is not None:
+            short_side = min(w, h)
+            long_side  = max(w, h)
+            min_short = MIN_FP_SHORT_SIDE if is_grayscale else MIN_SHORT_SIDE
+            min_long  = MIN_FP_LONG_SIDE  if is_grayscale else MIN_LONG_SIDE
+            if short_side < min_short or long_side < min_long:
+                logger.debug("Skipped %s: below min size (%sx%s)", url, w, h)
+                continue
 
         # Perceptual-hash dedup: only apply to colour photos.
         # Grayscale images are exempt because a mostly-white floor plan can share
