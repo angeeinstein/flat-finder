@@ -83,14 +83,14 @@ def extract_fields(
         return {}
     try:
         result = _call_ollama(text.strip(), context=context, model=model, url=ollama_url)
-        logger.debug("LLM extracted %d field(s)", len([v for v in result.values() if v is not None]))
+        logger.info("LLM extracted %d field(s)", len([v for v in result.values() if v is not None]))
         return result
     except requests.exceptions.ConnectionError:
-        logger.debug("Ollama not reachable at %s — skipping LLM extraction", ollama_url)
+        logger.warning("Ollama not reachable at %s — skipping LLM extraction", ollama_url)
         return {}
     except requests.exceptions.Timeout:
-        logger.debug("Ollama timed out after %ds — skipping LLM extraction", _TIMEOUT)
+        logger.warning("Ollama timed out after %ds — skipping LLM extraction", _TIMEOUT)
         return {}
     except Exception as exc:
-        logger.debug("LLM extraction skipped (%s: %s)", type(exc).__name__, exc)
+        logger.warning("LLM extraction skipped (%s: %s)", type(exc).__name__, exc)
         return {}
