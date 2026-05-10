@@ -99,6 +99,69 @@ install_certbot() {
     apt-get install -y --no-install-recommends certbot python3-certbot-nginx
 }
 
+# ---------- ollama ----------
+OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2:3b}"
+
+install_ollama() {
+    log_step "Ollama (LLM for listing text extraction)"
+    log_info "Ollama lets flat-finder extract extra fields (pets, internet included, landlord type)"
+    log_info "from the listing description text. Model: ${OLLAMA_MODEL} (~2 GB download)."
+    log_info "Minimum RAM recommended: 4 GB. Can be skipped and added later."
+
+    if ! confirm "Install Ollama and pull the model?" "Y"; then
+        log_info "Skipping Ollama. Import will work fine without it."
+        return 0
+    fi
+
+    # Install Ollama binary + systemd unit (idempotent)
+    if command -v ollama >/dev/null 2>&1; then
+        log_info "Ollama already installed ($(ollama --version 2>/dev/null || echo unknown version))."
+    else
+        log_info "Downloading Ollama installer..."
+        curl -fsSL https://ollama.com/install.sh | sh
+        log_ok "Ollama installed."
+    fi
+
+    systemctl enable --now ollama
+
+    # Wait up to 30 s for the API to become ready
+    log_info "Waiting for Ollama API..."
+    local ready=0
+    for _ in $(seq 1 15); do
+        if curl -sf http://localhost:11434/api/tags >/dev/null 2>&1; then
+            ready=1; break
+        fi
+        sleep 2
+    done
+    if [[ $ready -eq 0 ]]; then
+        log_warn "Ollama API did not respond in time. Try pulling the model manually later:"
+        log_warn "  ollama pull ${OLLAMA_MODEL}"
+        return 0
+    fi
+
+    # Pull model (skip if already present)
+    if ollama list 2>/dev/null | grep -q "^${OLLAMA_MODEL}"; then
+        log_info "Model ${OLLAMA_MODEL} already present."
+    else
+        log_info "Pulling ${OLLAMA_MODEL} — this may take a few minutes..."
+        ollama pull "${OLLAMA_MODEL}"
+        log_ok "Model ${OLLAMA_MODEL} ready."
+    fi
+}
+
+ensure_ollama_model() {
+    # Called during updates: if Ollama is installed make sure the model is present.
+    if ! command -v ollama >/dev/null 2>&1; then return 0; fi
+    if ! systemctl is-active --quiet ollama; then
+        systemctl start ollama 2>/dev/null || true
+        sleep 3
+    fi
+    if ! ollama list 2>/dev/null | grep -q "^${OLLAMA_MODEL}"; then
+        log_info "Pulling Ollama model ${OLLAMA_MODEL}..."
+        ollama pull "${OLLAMA_MODEL}" || log_warn "Model pull failed — run 'ollama pull ${OLLAMA_MODEL}' manually."
+    fi
+}
+
 # ---------- user, dirs ----------
 create_user() {
     log_step "Creating system user '${APP_USER}'"
@@ -362,6 +425,7 @@ new_install() {
     setup_postgres
     setup_redis
     run_migrations
+    install_ollama
     setup_systemd
     start_services
     setup_nginx
@@ -410,6 +474,7 @@ update_app() {
         FLASK_APP=wsgi:app set -a && . '$ENV_FILE' && set +a && \
         '$INSTALL_DIR/venv/bin/flask' backfill-owner-id 2>/dev/null || true && \
         '$INSTALL_DIR/venv/bin/flask' backfill-targets 2>/dev/null || true"
+    ensure_ollama_model
     setup_systemd
     setup_nginx
     start_services
@@ -434,6 +499,22 @@ repair_install() {
     systemctl is-active --quiet "$WEB_SERVICE"     || { log_warn "${WEB_SERVICE} is not running"; issues=$((issues+1)); }
     systemctl is-active --quiet "$WORKER_SERVICE"  || { log_warn "${WORKER_SERVICE} is not running"; issues=$((issues+1)); }
 
+    # Ollama is optional — just report its state, don't count as issue
+    if command -v ollama >/dev/null 2>&1; then
+        if systemctl is-active --quiet ollama; then
+            log_ok "Ollama service running."
+            if ollama list 2>/dev/null | grep -q "^${OLLAMA_MODEL}"; then
+                log_ok "Ollama model ${OLLAMA_MODEL} present."
+            else
+                log_warn "Ollama model ${OLLAMA_MODEL} not found. Run: ollama pull ${OLLAMA_MODEL}"
+            fi
+        else
+            log_warn "Ollama installed but service is not running."
+        fi
+    else
+        log_info "Ollama not installed (optional — enables AI field extraction)."
+    fi
+
     if [[ $issues -eq 0 ]]; then
         log_ok "All checks passed."
     else
@@ -449,6 +530,7 @@ repair_install() {
                 FLASK_APP=wsgi:app set -a && . '$ENV_FILE' && set +a && \
                 '$INSTALL_DIR/venv/bin/flask' backfill-owner-id 2>/dev/null || true && \
                 '$INSTALL_DIR/venv/bin/flask' backfill-targets 2>/dev/null || true"
+            ensure_ollama_model
             setup_systemd
             start_services
             setup_nginx
@@ -595,11 +677,12 @@ What would you like to do?
  12) Reconfigure Nginx
  13) Configure HTTPS (Let's Encrypt)
  14) Migrate database to UTF-8 encoding
- 15) Exit
+ 15) Install / configure Ollama (AI field extraction)
+ 16) Exit
 
 EOF
     local choice
-    read -rp "Choice [1-15]: " choice || true
+    read -rp "Choice [1-16]: " choice || true
     case "$choice" in
         1)
             update_self
@@ -627,7 +710,8 @@ EOF
             setup_https
             ;;
        14) fix_db_encoding ;;
-       15|q|Q|"") log_info "Bye."; exit 0 ;;
+       15) install_ollama ;;
+       16|q|Q|"") log_info "Bye."; exit 0 ;;
         *) log_warn "Invalid choice." ;;
     esac
 }
