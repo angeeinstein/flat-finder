@@ -210,11 +210,26 @@ def ai_settings():
 
         return redirect(url_for("settings.ai_settings"))
 
+    from app.services.importer.jobs import get_pull_job_status
+
     ollama_url = current_app.config.get("OLLAMA_URL", _DEFAULT_URL)
     current_model = AppSetting.get("ollama_model") or _DEFAULT_MODEL
     available = get_available_models(ollama_url)
     ai_enabled = AppSetting.get("ai_enabled") != "0"
     ai_summary_enabled = AppSetting.get("ai_summary_enabled") != "0"
+
+    available_names = {m["name"] for m in available}
+    recommended = [
+        {"name": "llama3.2:1b",   "speed": "~35s",  "quality": "Good",      "note": "Default — fast, solid German"},
+        {"name": "qwen2.5:1.5b",  "speed": "~15s",  "quality": "Very good", "note": "Best JSON accuracy, excellent multilingual"},
+        {"name": "qwen2.5:3b",    "speed": "~45s",  "quality": "Excellent", "note": "Top extraction quality"},
+        {"name": "llama3.2:3b",   "speed": "~90s",  "quality": "Better",    "note": "Familiar arch, slower"},
+        {"name": "gemma3:1b",     "speed": "~15s",  "quality": "OK",        "note": "Very fast, weaker German"},
+    ]
+    for m in recommended:
+        m["installed"] = m["name"] in available_names
+        m["pull_status"] = get_pull_job_status(m["name"]) if not m["installed"] else None
+
     return render_template(
         "settings/ai.html",
         current_model=current_model,
@@ -223,7 +238,26 @@ def ai_settings():
         ollama_reachable=bool(available),
         ai_enabled=ai_enabled,
         ai_summary_enabled=ai_summary_enabled,
+        recommended_models=recommended,
     )
+
+
+@bp.route("/ai/pull-model", methods=["POST"])
+@login_required
+def pull_model():
+    import re
+    if not current_user.is_admin:
+        abort(403)
+
+    model_name = request.form.get("model_name", "").strip()
+    if not re.match(r'^[a-zA-Z0-9._-]+(/[a-zA-Z0-9._-]+)?(:[a-zA-Z0-9._-]+)?$', model_name):
+        flash("Invalid model name.", "danger")
+        return redirect(url_for("settings.ai_settings"))
+
+    from app.services.importer.jobs import enqueue_ollama_pull
+    enqueue_ollama_pull(model_name)
+    flash(f'Pulling "{model_name}" in the background — this may take several minutes. Refresh to check progress.', "info")
+    return redirect(url_for("settings.ai_settings"))
 
 
 @bp.route("/categories/seed-defaults", methods=["POST"])

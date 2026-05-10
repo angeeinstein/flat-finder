@@ -9,8 +9,9 @@
 </div>
 
 <div class="row g-3">
-  <div class="col-lg-6">
+  <div class="col-lg-7">
 
+    {# ── Feature toggles ─────────────────────────────────────────────── #}
     <div class="card shadow-sm mb-3">
       <div class="card-header"><strong>Feature toggles</strong></div>
       <div class="card-body">
@@ -46,6 +47,7 @@
       </div>
     </div>
 
+    {# ── Ollama status ────────────────────────────────────────────────── #}
     <div class="card shadow-sm mb-3">
       <div class="card-header"><strong>Status</strong></div>
       <div class="card-body">
@@ -61,13 +63,68 @@
       </div>
     </div>
 
-    <div class="card shadow-sm">
+    {# ── Recommended models ───────────────────────────────────────────── #}
+    <div class="card shadow-sm mb-3">
+      <div class="card-header"><strong>Models</strong></div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Model</th>
+              <th class="text-muted fw-normal">Speed (2 CPU)</th>
+              <th class="text-muted fw-normal">Quality</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in recommended_models %}
+            <tr {% if m.name == current_model %}class="table-primary"{% endif %}>
+              <td>
+                <code class="fw-medium">{{ m.name }}</code>
+                {% if m.name == current_model %}<span class="badge bg-primary ms-1">active</span>{% endif %}
+                <div class="text-muted small">{{ m.note }}</div>
+              </td>
+              <td class="text-muted small">{{ m.speed }}</td>
+              <td class="text-muted small">{{ m.quality }}</td>
+              <td class="text-end">
+                {% if m.installed %}
+                  <span class="text-success small"><i class="bi bi-check-circle-fill"></i> Installed</span>
+                {% elif m.pull_status in ('queued', 'started') %}
+                  <span class="text-primary small">
+                    <span class="spinner-border spinner-border-sm"></span> Pulling…
+                  </span>
+                {% elif m.pull_status == 'failed' %}
+                  <span class="text-danger small me-2"><i class="bi bi-x-circle"></i> Failed</span>
+                  <form method="post" action="{{ url_for('settings.pull_model') }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="model_name" value="{{ m.name }}">
+                    <button class="btn btn-outline-danger btn-sm py-0">Retry</button>
+                  </form>
+                {% else %}
+                  <form method="post" action="{{ url_for('settings.pull_model') }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="model_name" value="{{ m.name }}">
+                    <button class="btn btn-outline-secondary btn-sm py-0">
+                      <i class="bi bi-download"></i> Install
+                    </button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# ── Active model selector (for installed models) ─────────────────── #}
+    {% if available_models %}
+    <div class="card shadow-sm mb-3">
       <div class="card-header d-flex align-items-center justify-content-between">
-        <strong>Model</strong>
-        <span class="text-muted small">active: <code>{{ current_model }}</code></span>
+        <strong>Active model</strong>
+        <span class="text-muted small">currently: <code>{{ current_model }}</code></span>
       </div>
       <div class="card-body">
-        {% if available_models %}
         <form method="post">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
@@ -85,34 +142,43 @@
           </div>
           <button type="submit" class="btn btn-primary btn-sm">Save</button>
         </form>
-        {% else %}
-        <p class="text-muted mb-0">
-          No models installed. Pull one with:<br>
-          <code>ollama pull llama3.2:1b</code>
-        </p>
-        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── Custom model pull ────────────────────────────────────────────── #}
+    <div class="card shadow-sm">
+      <div class="card-header"><strong>Install custom model</strong></div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('settings.pull_model') }}" class="d-flex gap-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="text" name="model_name" class="form-control form-control-sm font-monospace"
+                 placeholder="e.g. qwen2.5:7b" required
+                 pattern="[a-zA-Z0-9._/\-]+(:[a-zA-Z0-9._\-]+)?">
+          <button type="submit" class="btn btn-outline-secondary btn-sm text-nowrap">
+            <i class="bi bi-download"></i> Pull
+          </button>
+        </form>
+        <div class="text-muted small mt-2">Any model name from <a href="https://ollama.com/library" target="_blank" rel="noopener">ollama.com/library</a></div>
       </div>
     </div>
 
   </div>
-  <div class="col-lg-5">
+  <div class="col-lg-4">
     <div class="card border-0 bg-body-secondary">
       <div class="card-body small text-muted">
         <p class="fw-semibold text-body mb-2">About AI extraction</p>
-        <p class="mb-2">When Ollama is running, each imported listing is processed in the background to extract extra fields and generate a short summary:</p>
+        <p class="mb-2">When Ollama is running, each imported listing is processed in the background to extract extra fields:</p>
         <ul class="mb-2">
           <li>Pets allowed, internet included</li>
           <li>Elevator, renovation status, WG-suitability</li>
           <li>Key money (Ablöse), lease type</li>
           <li>Year built, laundry available</li>
-          <li>German summary (2–3 sentences)</li>
+          <li>German summary (optional)</li>
         </ul>
-        <p class="mb-2">Extraction runs ~30–60 seconds after import as a background job. Fields already found by the parser are never overwritten.</p>
-        <p class="mb-0"><strong>Model recommendations for CPU-only servers:</strong><br>
-          <code>llama3.2:1b</code> — fast (~35s), good quality<br>
-          <code>llama3.2:3b</code> — slower (~90s), better quality<br>
-          <code>qwen2:0.5b</code> — very fast (~10s), lower quality
-        </p>
+        <p class="mb-2">Extraction runs as a background job after import. Fields already found by the parser are never overwritten.</p>
+        <p class="mb-0 fw-semibold text-body">Tips</p>
+        <p class="mb-0">Installing a model takes several minutes and requires enough disk space. After pulling, refresh this page and set it as active. The pull runs in the background via the RQ worker — check Failed Jobs if something goes wrong.</p>
       </div>
     </div>
   </div>

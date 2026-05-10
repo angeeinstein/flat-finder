@@ -155,3 +155,58 @@ def llm_enhance_task(apartment_id: int) -> None:
         _apply_llm_fields(apt, fields)
         db.session.commit()
         logger.info("LLM enhance done for apartment %s", apartment_id)
+
+
+def enqueue_ollama_pull(model_name: str) -> None:
+    """Enqueue an ollama pull job. Uses a deterministic job ID so the same model
+    can't be queued twice simultaneously."""
+    try:
+        q = _get_queue()
+        job_id = f"ollama-pull-{model_name.replace(':', '-').replace('/', '-')}"
+        from rq.job import Job as _Job
+        redis = Redis.from_url(current_app.config["REDIS_URL"])
+        try:
+            existing = _Job.fetch(job_id, connection=redis)
+            if existing.get_status() in ("queued", "started"):
+                logger.info("Pull job already running for model %s", model_name)
+                return
+        except Exception:
+            pass
+        q.enqueue(
+            "app.services.importer.jobs.ollama_pull_task",
+            model_name,
+            job_id=job_id,
+            job_timeout=1800,
+            result_ttl=3600,
+            failure_ttl=86400,
+        )
+        logger.info("Enqueued ollama pull for model %s", model_name)
+    except Exception as e:
+        logger.warning("Could not enqueue ollama pull for %s: %s", model_name, e)
+
+
+def get_pull_job_status(model_name: str) -> str | None:
+    """Return 'queued', 'started', 'finished', 'failed', or None (not found)."""
+    try:
+        redis = Redis.from_url(current_app.config["REDIS_URL"])
+        job_id = f"ollama-pull-{model_name.replace(':', '-').replace('/', '-')}"
+        from rq.job import Job as _Job
+        job = _Job.fetch(job_id, connection=redis)
+        return str(job.get_status())
+    except Exception:
+        return None
+
+
+def ollama_pull_task(model_name: str) -> None:
+    """Worker task: runs 'ollama pull <model_name>' as a subprocess."""
+    import subprocess
+    logger.info("Starting ollama pull for model: %s", model_name)
+    result = subprocess.run(
+        ["ollama", "pull", model_name],
+        capture_output=True,
+        text=True,
+        timeout=1800,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"ollama pull {model_name} failed: {result.stderr[:500]}")
+    logger.info("Successfully pulled Ollama model: %s", model_name)
