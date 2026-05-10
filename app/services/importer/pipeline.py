@@ -263,11 +263,32 @@ def run_import_job(job_id: int) -> None:
         # Snapshot
         _save_snapshot(apt.id, source.id, html, result.text_snapshot)
 
-        # Geocode if needed
-        if (apt.lat is None or apt.lng is None) and apt.address:
-            coords = geocode(apt.address)
-            if coords:
-                apt.lat, apt.lng = coords
+        # Geocode if needed — try progressively coarser queries so that listings
+        # with only a city/postal code still land on the map.
+        if apt.lat is None or apt.lng is None:
+            _geo_candidates = []
+            if apt.address:
+                # Full street address is best; append city for context
+                suffix = " ".join(p for p in (apt.city, apt.country) if p)
+                _geo_candidates.append(f"{apt.address}, {suffix}" if suffix else apt.address)
+            if apt.postal_code and apt.city:
+                _geo_candidates.append(f"{apt.postal_code} {apt.city}")
+            elif apt.postal_code:
+                _geo_candidates.append(apt.postal_code)
+            if apt.city:
+                _geo_candidates.append(apt.city)
+            for _q in _geo_candidates:
+                _q = _q.strip()
+                if not _q:
+                    continue
+                coords = geocode(_q)
+                if coords:
+                    apt.lat, apt.lng = coords
+                    logger.info("Geocoded apartment %s via %r → %s, %s", apt.id, _q, *coords)
+                    break
+            else:
+                if _geo_candidates:
+                    logger.warning("Geocoding failed for apartment %s (tried: %r)", apt.id, _geo_candidates)
 
         # Download images (only for new apartments to avoid blowing up storage on refresh)
         if new_apartment:
