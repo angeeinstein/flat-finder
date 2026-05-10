@@ -44,6 +44,7 @@ class Apartment(db.Model):
     living_area_m2 = db.Column(db.Float, nullable=True)
     rooms = db.Column(db.Float, nullable=True)
     floor = db.Column(db.String(64), nullable=True)
+    year_built = db.Column(db.Integer, nullable=True)
     building_type = db.Column(db.String(120), nullable=True)
     heating_type = db.Column(db.String(120), nullable=True)
     energy_cert_info = db.Column(db.String(255), nullable=True)
@@ -55,6 +56,10 @@ class Apartment(db.Model):
     has_parking = db.Column(db.Boolean, nullable=True)
     has_cellar = db.Column(db.Boolean, nullable=True)
     is_furnished = db.Column(db.Boolean, nullable=True)
+    has_elevator = db.Column(db.Boolean, nullable=True)
+    is_renovated = db.Column(db.Boolean, nullable=True)
+    wg_suitable = db.Column(db.Boolean, nullable=True)
+    laundry_available = db.Column(db.Boolean, nullable=True)
 
     # Availability / lease
     available_from = db.Column(db.Date, nullable=True)
@@ -66,6 +71,7 @@ class Apartment(db.Model):
     internet_included = db.Column(db.Boolean, nullable=True)
     is_private_landlord = db.Column(db.Boolean, nullable=True)
     key_money = db.Column(db.Numeric(10, 2), nullable=True)
+    ai_summary = db.Column(db.Text, nullable=True)
 
     # Contact
     contact_name = db.Column(db.String(255), nullable=True)

@@ -7,7 +7,7 @@ that the HTML parser could not find.
 
 Usage:
     from app.services.llm import extract_fields
-    fields = extract_fields(description_text)  # always returns a dict
+    fields = extract_fields(description_text, context="Preis: 800 EUR\\nFläche: 60 m²")
 """
 from __future__ import annotations
 
@@ -18,34 +18,45 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-_TIMEOUT = 25           # seconds — generous for CPU-only inference
+_TIMEOUT = 40           # seconds — generous for CPU-only inference; extended prompt needs more time
 _DEFAULT_URL = "http://localhost:11434"
-_DEFAULT_MODEL = "llama3.2:3b"   # phi3:mini is a good alternative
+_DEFAULT_MODEL = "llama3.2:3b"
 
 _PROMPT = """\
-You are a structured real-estate data extractor. Read the apartment listing text and return a single JSON object. Use null for any field you are not confident about.
+You are a structured real-estate data extractor. Read the apartment listing and return a single JSON object. Use null for any field you are not confident about.
+
+Structured listing data (already extracted by the parser):
+---
+{context}
+---
+
+Listing description text:
+---
+{text}
+---
 
 Fields:
 - "pets_allowed": true / false / null
 - "internet_included": true / false / null
 - "is_private_landlord": true / false / null  (true = private person, false = agency/broker)
-- "available_from": "YYYY-MM-DD" / null  (when the flat is available; "ab sofort" → today's date)
+- "available_from": "YYYY-MM-DD" / null  ("ab sofort" → today's date)
 - "floor": string / null  (e.g. "3", "EG", "DG", "4. OG")
 - "key_money": number / null  (Ablöse in EUR — one-time payment to previous tenant)
 - "lease_is_limited": true / false / null  (befristet=true, unbefristet=false)
-
-Listing text:
----
-{text}
----
+- "has_elevator": true / false / null  (Aufzug vorhanden)
+- "is_renovated": true / false / null  (frisch saniert / renoviert = true, unsaniert = false)
+- "wg_suitable": true / false / null  (WG-geeignet, Wohngemeinschaft ausdrücklich erlaubt)
+- "year_built": number / null  (Baujahr als vierstellige Zahl)
+- "laundry_available": true / false / null  (Waschmaschine in der Wohnung oder Waschküche im Haus)
+- "summary": string / null  — Schreibe 2–3 sachliche Sätze auf Deutsch, die das Inserat zusammenfassen. Nutze die strukturierten Daten UND den Beschreibungstext. Nenne Preis, Größe, Lage und wichtige Ausstattungsmerkmale. Kein Werbejargon.
 
 Return ONLY the JSON object. No explanation, no markdown."""
 
 
-def _call_ollama(text: str, model: str, url: str) -> dict:
+def _call_ollama(text: str, context: str, model: str, url: str) -> dict:
     payload = {
         "model": model,
-        "prompt": _PROMPT.format(text=text[:4000]),
+        "prompt": _PROMPT.format(text=text[:3500], context=context[:600]),
         "stream": False,
         "format": "json",
     }
@@ -60,17 +71,18 @@ def _call_ollama(text: str, model: str, url: str) -> dict:
 
 def extract_fields(
     text: str,
+    context: str = "",
     model: str = _DEFAULT_MODEL,
     ollama_url: str = _DEFAULT_URL,
 ) -> dict:
-    """Extract structured fields from a listing description via Ollama.
+    """Extract structured fields and generate a German summary via Ollama.
 
     Returns a (possibly empty) dict — never raises.
     """
     if not text or not text.strip():
         return {}
     try:
-        result = _call_ollama(text.strip(), model=model, url=ollama_url)
+        result = _call_ollama(text.strip(), context=context, model=model, url=ollama_url)
         logger.debug("LLM extracted %d field(s)", len([v for v in result.values() if v is not None]))
         return result
     except requests.exceptions.ConnectionError:

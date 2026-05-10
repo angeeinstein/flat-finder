@@ -168,6 +168,16 @@ def register_cli(app: Flask) -> None:
 
         # If owner_id column exists and user_id exists, copy user_id → owner_id where needed
         try:
+            # Check whether the old user_id column still exists before migrating
+            col_exists = db.session.execute(
+                text("""
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name='target_addresses' AND column_name='user_id'
+                """)
+            ).fetchone()
+            if not col_exists:
+                click.echo("Backfill targets skipped (user_id column already removed).")
+                return
             result = db.session.execute(
                 text("""
                     UPDATE target_addresses

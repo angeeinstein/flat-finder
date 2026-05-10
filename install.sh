@@ -121,7 +121,14 @@ install_ollama() {
         # zstd is required by the Ollama installer (idempotent if already installed)
         apt-get install -y --no-install-recommends zstd
         log_info "Downloading Ollama installer..."
-        curl -fsSL https://ollama.com/install.sh | sh
+        # Ignore non-zero exit from the Ollama installer — it may fail on GPU/CUDA
+        # driver steps (e.g. missing kernel headers on PVE kernels) while still
+        # installing the CPU-capable ollama binary successfully.
+        curl -fsSL https://ollama.com/install.sh | sh || true
+        if ! command -v ollama >/dev/null 2>&1; then
+            log_error "Ollama binary not found after installer ran. Skipping model pull."
+            return 1
+        fi
         log_ok "Ollama installed."
     fi
 

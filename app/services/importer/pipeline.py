@@ -202,13 +202,48 @@ def _record_changes(apt: Apartment, changes: dict, detected_by: str) -> None:
         ))
 
 
+def _build_llm_context(apt: Apartment) -> str:
+    """Format already-parsed apartment fields as a short context block for the LLM."""
+    parts = []
+    if apt.price:
+        parts.append(f"Miete: {float(apt.price):.0f} EUR")
+    if apt.operating_costs:
+        parts.append(f"Betriebskosten: {float(apt.operating_costs):.0f} EUR")
+    total = apt.computed_total_monthly_cost
+    if total:
+        parts.append(f"Gesamtmiete: {total:.0f} EUR/Monat")
+    if apt.living_area_m2:
+        parts.append(f"Wohnfläche: {apt.living_area_m2:.0f} m²")
+    if apt.rooms:
+        parts.append(f"Zimmer: {apt.rooms}")
+    if apt.floor:
+        parts.append(f"Stockwerk: {apt.floor}")
+    if apt.address:
+        parts.append(f"Adresse: {apt.address}")
+    loc = " ".join(p for p in [apt.postal_code, apt.city] if p)
+    if loc:
+        parts.append(f"Ort: {loc}")
+    if apt.available_from:
+        parts.append(f"Verfügbar ab: {apt.available_from.isoformat()}")
+    if apt.deposit:
+        parts.append(f"Kaution: {float(apt.deposit):.0f} EUR")
+    if apt.commission:
+        parts.append(f"Provision: {float(apt.commission):.0f} EUR")
+    return "\n".join(parts)
+
+
 def _apply_llm_fields(apt: Apartment, fields: dict) -> None:
-    """Merge LLM-extracted fields into apt — only fills slots that are still None."""
+    """Merge LLM-extracted fields into apt — only fills slots that are still None,
+    except ai_summary which is always refreshed."""
     bool_fields = {
-        "pets_allowed":      "pets_allowed",
-        "internet_included": "internet_included",
+        "pets_allowed":        "pets_allowed",
+        "internet_included":   "internet_included",
         "is_private_landlord": "is_private_landlord",
-        "lease_is_limited":  "lease_duration_limited",
+        "lease_is_limited":    "lease_duration_limited",
+        "has_elevator":        "has_elevator",
+        "is_renovated":        "is_renovated",
+        "wg_suitable":         "wg_suitable",
+        "laundry_available":   "laundry_available",
     }
     for src, dst in bool_fields.items():
         val = fields.get(src)
@@ -235,6 +270,20 @@ def _apply_llm_fields(apt: Apartment, fields: dict) -> None:
         try:
             from datetime import date as _date
             apt.available_from = _date.fromisoformat(str(fields["available_from"]))
+        except Exception:
+            pass
+
+    yb = fields.get("year_built")
+    if yb is not None and apt.year_built is None:
+        try:
+            apt.year_built = int(yb)
+        except Exception:
+            pass
+
+    summary = fields.get("summary")
+    if summary:
+        try:
+            apt.ai_summary = str(summary)[:2000]
         except Exception:
             pass
 
@@ -318,13 +367,13 @@ def run_import_job(job_id: int) -> None:
             db.session.flush()
             new_apartment = True
 
-        # LLM enhancement — runs on every import (new + refresh) to fill gaps.
+        # LLM enhancement — runs on every import (new + refresh) to fill gaps + generate summary.
         # Completely optional: any error is silently swallowed; description is never modified.
         try:
             from app.services.llm import extract_fields as _llm_extract
             desc = apt.description or result.text_snapshot or ""
             if desc.strip():
-                llm_data = _llm_extract(desc)
+                llm_data = _llm_extract(desc, context=_build_llm_context(apt))
                 if llm_data:
                     _apply_llm_fields(apt, llm_data)
         except Exception:

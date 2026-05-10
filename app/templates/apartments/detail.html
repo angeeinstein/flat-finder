@@ -97,6 +97,18 @@
     </div>
     {% endif %}
 
+    <!-- AI summary -->
+    {% if apt.ai_summary %}
+    <div class="card border-0 bg-body-secondary mb-3">
+      <div class="card-body py-3">
+        <div class="d-flex gap-2 align-items-start">
+          <i class="bi bi-stars text-primary flex-shrink-0 mt-1"></i>
+          <p class="mb-0 text-body-secondary">{{ apt.ai_summary }}</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Key facts grid -->
     <div class="card mb-3">
       <div class="card-body">
@@ -158,8 +170,24 @@
             {% endif %}
             {% if apt.is_private_landlord is not none %}
               <span class="badge bg-secondary-subtle text-secondary-emphasis" title="AI-extracted">
-                <i class="bi bi-person"></i> {{ 'Private landlord' if apt.is_private_landlord else 'Agency' }}
+                <i class="bi bi-person"></i> {{ 'Privat' if apt.is_private_landlord else 'Makler' }}
               </span>
+            {% endif %}
+            {% if apt.has_elevator %}
+              <span class="badge bg-success-subtle text-success-emphasis" title="AI-extracted"><i class="bi bi-elevator"></i> Aufzug</span>
+            {% endif %}
+            {% if apt.is_renovated is not none %}
+              {% if apt.is_renovated %}
+                <span class="badge bg-success-subtle text-success-emphasis" title="AI-extracted"><i class="bi bi-house-check"></i> Saniert</span>
+              {% else %}
+                <span class="badge bg-warning-subtle text-warning-emphasis" title="AI-extracted"><i class="bi bi-house-exclamation"></i> Unsaniert</span>
+              {% endif %}
+            {% endif %}
+            {% if apt.wg_suitable %}
+              <span class="badge bg-info-subtle text-info-emphasis" title="AI-extracted"><i class="bi bi-people"></i> WG-geeignet</span>
+            {% endif %}
+            {% if apt.laundry_available %}
+              <span class="badge bg-success-subtle text-success-emphasis" title="AI-extracted"><i class="bi bi-washing-machine"></i> Waschküche</span>
             {% endif %}
           </div>
         {% endif %}
@@ -179,6 +207,7 @@
             <tr><th>Estimated yearly</th><td>{{ '€%.0f'|format(apt.estimated_yearly_cost) if apt.estimated_yearly_cost else '–' }}</td></tr>
             <tr><th>First month total</th><td>{{ '€%.0f'|format(apt.estimated_first_month_cost) if apt.estimated_first_month_cost else '–' }}</td></tr>
             <tr><th>Building / heating</th><td>{{ apt.building_type or '–' }}{% if apt.heating_type %} · {{ apt.heating_type }}{% endif %}</td></tr>
+            {% if apt.year_built %}<tr><th>Baujahr</th><td>{{ apt.year_built }}</td></tr>{% endif %}
             <tr><th>Energy</th><td>{{ apt.energy_cert_info or '–' }}</td></tr>
             <tr><th>Lease</th><td>{% if apt.lease_duration_limited %}Limited{% if apt.lease_duration_text %} ({{ apt.lease_duration_text }}){% endif %}{% else %}Unlimited{% endif %}</td></tr>
             {% if apt.key_money %}<tr><th>Ablöse (key money)</th><td>€{{ '%.0f'|format(apt.key_money) }}</td></tr>{% endif %}
