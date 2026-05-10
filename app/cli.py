@@ -83,6 +83,8 @@ def register_cli(app: Flask) -> None:
             ))
 
         # Sample apartments
+        admin_user = User.query.filter_by(role=UserRole.ADMIN).first()
+        owner_id = admin_user.id if admin_user else None
         if not Apartment.query.first():
             samples = [
                 dict(title="Bright 2-room near city center", price=950, operating_costs=120,
@@ -102,7 +104,7 @@ def register_cli(app: Flask) -> None:
                      has_balcony=True, has_parking=True),
             ]
             for s in samples:
-                apt = Apartment(**s)
+                apt = Apartment(owner_id=owner_id, created_by_id=owner_id, **s)
                 db.session.add(apt)
         db.session.commit()
         click.echo("Demo data seeded.")
@@ -143,6 +145,21 @@ def register_cli(app: Flask) -> None:
     def recalc_scores():
         """No-op: scores are computed on-demand."""
         click.echo("Scores are computed on the fly; nothing to recalc.")
+
+    @app.cli.command("backfill-owner-id")
+    @with_appcontext
+    def backfill_owner_id():
+        """Set owner_id = created_by_id for apartments created before teams feature."""
+        from app.models.apartment import Apartment
+        from sqlalchemy import update
+
+        result = db.session.execute(
+            update(Apartment)
+            .where(Apartment.owner_id.is_(None), Apartment.created_by_id.isnot(None))
+            .values(owner_id=Apartment.created_by_id)
+        )
+        db.session.commit()
+        click.echo(f"Backfilled owner_id for {result.rowcount} apartments.")
 
     @app.cli.command("check-config")
     @with_appcontext

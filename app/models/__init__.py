@@ -1,5 +1,6 @@
 """Re-export all models so Alembic can discover them."""
 from app.models.user import User, UserRole
+from app.models.team import Team, TeamMember, TeamInvitation, TeamMessage, TeamMemberRole
 from app.models.apartment import Apartment
 from app.models.listing import (
     ListingSource,
@@ -24,6 +25,11 @@ from app.models.audit import AuditLog
 __all__ = [
     "User",
     "UserRole",
+    "Team",
+    "TeamMember",
+    "TeamInvitation",
+    "TeamMessage",
+    "TeamMemberRole",
     "Apartment",
     "ListingSource",
     "ApartmentImage",

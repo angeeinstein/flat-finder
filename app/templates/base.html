@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
@@ -44,6 +45,41 @@
         {% endif %}
       </ul>
       <ul class="navbar-nav">
+        {# Context switcher #}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" title="Active context">
+            {% if active_ctx and not active_ctx.is_personal %}
+              <i class="bi bi-people-fill text-primary"></i> {{ active_ctx.label() }}
+            {% else %}
+              <i class="bi bi-person-fill"></i> Personal
+            {% endif %}
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><span class="dropdown-item-text small text-muted fw-semibold">Switch context</span></li>
+            <li>
+              <form action="{{ url_for('main.switch_context') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="team_id" value="">
+                <button type="submit" class="dropdown-item {% if active_ctx and active_ctx.is_personal %}active{% endif %}">
+                  <i class="bi bi-person"></i> Personal
+                </button>
+              </form>
+            </li>
+            {% for team in user_teams %}
+            <li>
+              <form action="{{ url_for('main.switch_context') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="team_id" value="{{ team.id }}">
+                <button type="submit" class="dropdown-item {% if active_ctx and active_ctx.team_id == team.id %}active{% endif %}">
+                  <i class="bi bi-people"></i> {{ team.name }}
+                </button>
+              </form>
+            </li>
+            {% endfor %}
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="{{ url_for('teams.index') }}"><i class="bi bi-gear"></i> Manage teams</a></li>
+          </ul>
+        </li>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
             <i class="bi bi-person-circle"></i> {{ current_user.username }}

@@ -259,7 +259,11 @@ def run_import_job(job_id: int) -> None:
             apt.is_offline = False
             new_apartment = False
         else:
-            apt = Apartment(created_by_id=job.created_by_id)
+            apt = Apartment(
+                created_by_id=job.created_by_id,
+                owner_id=job.created_by_id,
+                team_id=job.team_id,
+            )
             _apply_extracted_fields(apt, result.fields)
             db.session.add(apt)
             db.session.flush()
@@ -365,11 +369,14 @@ def run_refresh_for_source(source_id: int) -> None:
     src = db.session.get(ListingSource, source_id)
     if not src:
         return
+    apt = src.apartment
     job = ImportJob(
         url=src.url,
         status=ImportJobStatus.PENDING,
         listing_source_id=src.id,
         apartment_id=src.apartment_id,
+        created_by_id=apt.created_by_id if apt else None,
+        team_id=apt.team_id if apt else None,
     )
     db.session.add(job)
     db.session.commit()

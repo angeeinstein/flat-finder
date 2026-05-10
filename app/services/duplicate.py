@@ -110,18 +110,23 @@ def score_pair(a: Apartment, b: Apartment) -> tuple[int, list[str]]:
 
 
 def _candidate_apartments(apt: Apartment) -> Iterable[Apartment]:
-    """Pick a small set of likely-duplicate candidates to score."""
-    # Quick filters: same city OR same external id OR same canonical URL
+    """Pick a small set of likely-duplicate candidates within the same context."""
     q = Apartment.query.filter(Apartment.id != apt.id)
+    # Scope to the same context: personal (owner-scoped) or team
+    if apt.team_id is not None:
+        q = q.filter(Apartment.team_id == apt.team_id)
+    else:
+        q = q.filter(
+            Apartment.owner_id == apt.owner_id,
+            Apartment.team_id.is_(None),
+        )
     filters = []
     if apt.city:
         filters.append(Apartment.city.ilike(apt.city))
-    # By address substring
     if apt.address:
         filters.append(Apartment.address.ilike(f"%{apt.address[:60]}%"))
     if filters:
         q = q.filter(or_(*filters))
-    # Cap to avoid n^2 explosion
     return q.limit(200).all()
 
 

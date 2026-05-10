@@ -77,6 +77,18 @@ class Apartment(db.Model):
     # Warning flags as JSON list of strings
     warning_flags = db.Column(JsonType, nullable=False, default=list)
 
+    # Ownership / context — determines which user/team can see this apartment.
+    # owner_id: the user who imported it (personal context = team_id IS NULL).
+    # team_id:  set when imported in team context; NULL means personal.
+    owner_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True, index=True,
+    )
+    team_id = db.Column(
+        db.Integer, db.ForeignKey("teams.id", ondelete="SET NULL"),
+        nullable=True, index=True,
+    )
+
     # Timestamps
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     updated_at = db.Column(
@@ -86,6 +98,8 @@ class Apartment(db.Model):
         db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     created_by = db.relationship("User", foreign_keys=[created_by_id])
+    owner = db.relationship("User", foreign_keys="Apartment.owner_id")
+    team = db.relationship("Team", foreign_keys="Apartment.team_id")
 
     # Relationships
     listing_sources = db.relationship(

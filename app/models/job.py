@@ -38,7 +38,11 @@ class ImportJob(db.Model):
     created_by_id = db.Column(
         db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    team_id = db.Column(
+        db.Integer, db.ForeignKey("teams.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
     apartment = db.relationship("Apartment", foreign_keys=[apartment_id])
     listing_source = db.relationship("ListingSource", foreign_keys=[listing_source_id])
     created_by = db.relationship("User", foreign_keys=[created_by_id])
+    team = db.relationship("Team", foreign_keys=[team_id])

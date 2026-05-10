@@ -4,7 +4,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.extensions import db
@@ -72,7 +72,7 @@ def list_view():
 def create():
     form = ApartmentForm()
     if form.validate_on_submit():
-        apt = Apartment(created_by_id=current_user.id)
+        apt = Apartment(**g.ctx.apartment_defaults())
         _form_to_apartment(form, apt)
         db.session.add(apt)
         db.session.flush()
@@ -97,6 +97,7 @@ def detail(apt_id: int):
     apt = db.session.get(Apartment, apt_id)
     if not apt:
         abort(404)
+    g.ctx.check_apartment(apt)
 
     categories = (
         RatingCategory.query.filter_by(is_active=True)
@@ -131,20 +132,22 @@ def detail(apt_id: int):
     tag_form = TagForm()
     all_tags = Tag.query.order_by(Tag.name).all()
 
-    # All users who have rated this apartment (for team score display)
-    rater_ids = [
-        uid for (uid,) in db.session.query(ApartmentRating.user_id)
-        .filter_by(apartment_id=apt_id).distinct().all()
-    ]
-    raters = {u.id: u for u in User.query.filter(User.id.in_(rater_ids)).all()}
-    user_scores = [
-        (raters[uid], calculate_score(apt_id, uid))
-        for uid in rater_ids
-        if uid in raters
-    ]
-    user_scores.sort(key=lambda x: (x[1] is None, -(x[1] or 0)))
+    # In team context show all members' scores; personal context shows only your own.
+    if g.ctx.is_personal:
+        user_scores = [(current_user, personal_score)] if personal_score is not None else []
+    else:
+        rater_ids = [
+            uid for (uid,) in db.session.query(ApartmentRating.user_id)
+            .filter_by(apartment_id=apt_id).distinct().all()
+        ]
+        raters = {u.id: u for u in User.query.filter(User.id.in_(rater_ids)).all()}
+        user_scores = [
+            (raters[uid], calculate_score(apt_id, uid))
+            for uid in rater_ids
+            if uid in raters
+        ]
+        user_scores.sort(key=lambda x: (x[1] is None, -(x[1] or 0)))
 
-    # Recent activity log entries for this apartment
     activity = (
         AuditLog.query
         .filter_by(target_type="Apartment", target_id=apt_id)
@@ -182,6 +185,7 @@ def edit(apt_id: int):
     apt = db.session.get(Apartment, apt_id)
     if not apt:
         abort(404)
+    g.ctx.check_apartment(apt)
 
     form = ApartmentForm(obj=apt)
     if form.validate_on_submit():
@@ -205,13 +209,18 @@ def delete(apt_id: int):
     apt = db.session.get(Apartment, apt_id)
     if not apt:
         abort(404)
-    if not current_user.is_admin and apt.created_by_id != current_user.id:
-        abort(403)
+    # Team admins can also delete; personal owners can always delete their own.
+    from app.models.team import TeamMemberRole
+    if not current_user.is_admin:
+        g.ctx.check_apartment(apt)
+        if not g.ctx.is_personal and apt.team_id:
+            team = apt.team
+            if not (team and team.is_admin(current_user.id)) and apt.owner_id != current_user.id:
+                abort(403)
 
     title = apt.title or f"#{apt_id}"
     image_dir = Path(current_app.config["IMAGE_DIR"]) / str(apt_id)
 
-    # Audit *before* the destructive commit so we never lose a record of the action.
     log_action(
         "apartment_deleted",
         target_type="Apartment",
@@ -229,7 +238,6 @@ def delete(apt_id: int):
         flash(f"Could not delete apartment: {exc}", "danger")
         return redirect(url_for("apartments.detail", apt_id=apt_id))
 
-    # Remove image files from disk only after the DB commit succeeded.
     if image_dir.exists():
         shutil.rmtree(image_dir, ignore_errors=True)
 
@@ -243,6 +251,7 @@ def add_note_form(apt_id: int):
     apt = db.session.get(Apartment, apt_id)
     if not apt:
         abort(404)
+    g.ctx.check_apartment(apt)
     form = NoteForm()
     if form.validate_on_submit():
         note = UserApartmentNote(
@@ -262,6 +271,7 @@ def refresh(apt_id: int):
     apt = db.session.get(Apartment, apt_id)
     if not apt:
         abort(404)
+    g.ctx.check_apartment(apt)
     sources = [s for s in apt.listing_sources if s.is_active]
     if not sources:
         flash("No active listing source to refresh.", "warning")
@@ -283,6 +293,7 @@ def history(apt_id: int):
     apt = db.session.get(Apartment, apt_id)
     if not apt:
         abort(404)
+    g.ctx.check_apartment(apt)
     changes = apt.changes.limit(500).all()
     return render_template("apartments/history.html", apt=apt, changes=changes)
 
@@ -293,6 +304,7 @@ def gallery(apt_id: int):
     apt = db.session.get(Apartment, apt_id)
     if not apt:
         abort(404)
+    g.ctx.check_apartment(apt)
     return render_template("apartments/gallery.html", apt=apt)
 
 
@@ -308,8 +320,8 @@ def compare():
     ids = ids[:4]
     apartments = []
     if ids:
-        apartments = Apartment.query.filter(Apartment.id.in_(ids)).all()
-        # preserve order
+        # Filter to context-visible apartments only
+        apartments = g.ctx.apartment_query().filter(Apartment.id.in_(ids)).all()
         order = {i: pos for pos, i in enumerate(ids)}
         apartments.sort(key=lambda a: order.get(a.id, 999))
 
@@ -331,7 +343,7 @@ def compare():
         for r in rows:
             travel[(r.apartment_id, r.target_id, r.mode.value)] = r
 
-    all_apartments = Apartment.query.order_by(Apartment.title).limit(500).all()
+    all_apartments = g.ctx.apartment_query().order_by(Apartment.title).limit(500).all()
     return render_template(
         "apartments/compare.html",
         apartments=apartments,

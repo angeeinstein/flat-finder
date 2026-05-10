@@ -405,6 +405,10 @@ update_app() {
 
     setup_python
     run_migrations
+    # Backfill owner_id for apartments created before the teams feature was added.
+    sudo -u "$APP_USER" bash -c "cd '$INSTALL_DIR' && \
+        FLASK_APP=wsgi:app set -a && . '$ENV_FILE' && set +a && \
+        '$INSTALL_DIR/venv/bin/flask' backfill-owner-id 2>/dev/null || true"
     setup_systemd
     setup_nginx
     start_services
@@ -440,6 +444,9 @@ repair_install() {
             setup_postgres
             setup_redis
             run_migrations
+            sudo -u "$APP_USER" bash -c "cd '$INSTALL_DIR' && \
+                FLASK_APP=wsgi:app set -a && . '$ENV_FILE' && set +a && \
+                '$INSTALL_DIR/venv/bin/flask' backfill-owner-id 2>/dev/null || true"
             setup_systemd
             start_services
             setup_nginx

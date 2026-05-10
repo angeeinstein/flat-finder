@@ -5,7 +5,7 @@ import logging
 import os
 from pathlib import Path
 
-from flask import Flask, redirect, request, url_for
+from flask import Flask, g, redirect, request, url_for
 from flask_login import current_user
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -85,6 +85,7 @@ def _register_blueprints(app: Flask) -> None:
     from app.views.map import bp as map_bp
     from app.views.admin import bp as admin_bp
     from app.views.api import bp as api_bp
+    from app.views.teams import bp as teams_bp
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(main_bp)
@@ -92,6 +93,7 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(map_bp, url_prefix="/map")
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(api_bp, url_prefix="/api")
+    app.register_blueprint(teams_bp, url_prefix="/teams")
 
     csrf.exempt(api_bp)  # API uses its own CSRF token in headers; simpler to exempt
 
@@ -115,10 +117,20 @@ def _register_template_globals(app: Flask) -> None:
 
     @app.context_processor
     def inject_globals():
+        ctx = getattr(g, "ctx", None)
+        user_teams: list = []
+        if current_user.is_authenticated:
+            from app.models.team import TeamMember
+            memberships = TeamMember.query.filter_by(
+                user_id=current_user.id
+            ).all()
+            user_teams = [m.team for m in memberships if m.team]
         return {
             "app_name": "flat-finder",
             "any_admin_exists": _any_admin_exists,
             "static_version": static_version,
+            "active_ctx": ctx,
+            "user_teams": user_teams,
         }
 
     def _any_admin_exists() -> bool:
@@ -136,6 +148,7 @@ def _register_global_login_required(app: Flask) -> None:
         "auth.logout",
         "auth.first_admin",
         "static",
+        "teams.join",  # invite link must be accessible before login redirect
     }
 
     @app.before_request
@@ -146,6 +159,9 @@ def _register_global_login_required(app: Flask) -> None:
         if endpoint.startswith("static"):
             return None
         if current_user.is_authenticated:
+            # Build AppContext and attach to g for this request
+            from app.services.context import AppContext
+            g.ctx = AppContext.from_session(current_user.id)
             return None
         # Allow first-admin setup if no admin exists yet
         from app.models.user import User as _User, UserRole

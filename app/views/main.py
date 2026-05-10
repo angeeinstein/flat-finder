@@ -1,7 +1,7 @@
 """Main blueprint: dashboard, search, import URL form, job status."""
 from __future__ import annotations
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import or_
 
@@ -24,7 +24,7 @@ bp = Blueprint("main", __name__, template_folder="../templates")
 def dashboard():
     form = ApartmentSearchForm(request.args, meta={"csrf": False})
 
-    q = Apartment.query.filter(Apartment.is_offline.is_(False) | Apartment.is_offline.is_(True))
+    q = g.ctx.apartment_query()
     # Filters
     if form.q.data:
         like = f"%{form.q.data.lower()}%"
@@ -69,7 +69,6 @@ def dashboard():
     total = q.count()
     apartments = q.offset((page - 1) * per_page).limit(per_page).all()
 
-    # Personal scores
     personal_scores: dict[int, float | None] = {}
     avg_scores: dict[int, float | None] = {}
     statuses: dict[int, StatusEnum | None] = {}
@@ -133,7 +132,7 @@ def import_url():
             job = ImportJob(
                 url=clean_url,
                 status=ImportJobStatus.PENDING,
-                created_by_id=current_user.id,
+                **g.ctx.job_defaults(),
             )
             db.session.add(job)
             db.session.flush()
@@ -142,7 +141,6 @@ def import_url():
             try:
                 enqueue_import(job.id)
             except Exception as e:
-                # Worker / Redis unavailable: keep the job pending so it can be retried later
                 job.error_message = f"Could not enqueue: {e}"
                 job.status = ImportJobStatus.FAILED
                 db.session.commit()
@@ -161,7 +159,7 @@ def import_url():
         return redirect(url_for("main.import_url"))
 
     recent_jobs = (
-        ImportJob.query.filter_by(created_by_id=current_user.id)
+        g.ctx.import_job_query()
         .order_by(ImportJob.created_at.desc())
         .limit(20)
         .all()
@@ -175,8 +173,7 @@ def job_status(job_id: int):
     job = db.session.get(ImportJob, job_id)
     if not job:
         abort(404)
-    if job.created_by_id != current_user.id and not current_user.is_admin:
-        abort(403)
+    g.ctx.check_job(job)
     return render_template("main/job_status.html", job=job)
 
 
@@ -186,8 +183,7 @@ def delete_job(job_id: int):
     job = db.session.get(ImportJob, job_id)
     if not job:
         abort(404)
-    if job.created_by_id != current_user.id and not current_user.is_admin:
-        abort(403)
+    g.ctx.check_job(job)
     if job.status == ImportJobStatus.RUNNING:
         flash("Cannot delete a running job.", "warning")
         return redirect(url_for("main.job_status", job_id=job_id))
@@ -195,3 +191,29 @@ def delete_job(job_id: int):
     db.session.commit()
     flash("Job deleted.", "success")
     return redirect(url_for("main.import_url"))
+
+
+@bp.route("/context/switch", methods=["POST"])
+@login_required
+def switch_context():
+    from flask import session
+    from app.models.team import TeamMember
+
+    team_id_str = request.form.get("team_id", "").strip()
+    if not team_id_str:
+        session.pop("active_team_id", None)
+    else:
+        try:
+            team_id = int(team_id_str)
+        except ValueError:
+            abort(400)
+        # Verify membership before accepting
+        member = TeamMember.query.filter_by(
+            team_id=team_id, user_id=current_user.id
+        ).first()
+        if not member:
+            abort(403)
+        session["active_team_id"] = team_id
+
+    next_url = request.referrer or url_for("main.dashboard")
+    return redirect(next_url)

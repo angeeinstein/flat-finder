@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from flask import Blueprint, abort, jsonify, request, url_for
+from flask import Blueprint, abort, g, jsonify, request, url_for
 from flask_login import current_user, login_required
 
 from app.extensions import db
@@ -37,8 +37,7 @@ def job_status(job_id: int):
     job = db.session.get(ImportJob, job_id)
     if not job:
         abort(404)
-    if job.created_by_id != current_user.id and not current_user.is_admin:
-        abort(403)
+    g.ctx.check_job(job)
     return jsonify({
         "id": job.id,
         "url": job.url,
@@ -62,7 +61,7 @@ def map_markers():
     target_id = request.args.get("target_id", type=int)
     mode = request.args.get("mode", "car")
 
-    apartments = Apartment.query.filter(
+    apartments = g.ctx.apartment_query().filter(
         Apartment.lat.isnot(None), Apartment.lng.isnot(None)
     ).all()
 
@@ -168,6 +167,7 @@ def rate(apt_id: int):
     apt = db.session.get(Apartment, apt_id)
     if not apt:
         abort(404)
+    g.ctx.check_apartment(apt)
     data = request.get_json(silent=True) or {}
     cat_id = data.get("category_id")
     score = data.get("score")
@@ -230,6 +230,7 @@ def set_status(apt_id: int):
     apt = db.session.get(Apartment, apt_id)
     if not apt:
         abort(404)
+    g.ctx.check_apartment(apt)
     data = request.get_json(silent=True) or {}
     status_value = data.get("status")
     if not status_value:
@@ -262,6 +263,7 @@ def add_tag(apt_id: int):
     apt = db.session.get(Apartment, apt_id)
     if not apt:
         abort(404)
+    g.ctx.check_apartment(apt)
     data = request.get_json(silent=True) or {}
     name = (data.get("name") or "").strip()
     if not name:
@@ -285,6 +287,7 @@ def remove_tag(apt_id: int, tag_id: int):
     apt = db.session.get(Apartment, apt_id)
     if not apt:
         abort(404)
+    g.ctx.check_apartment(apt)
     tag = db.session.get(Tag, tag_id)
     if not tag:
         abort(404)
@@ -301,6 +304,7 @@ def add_note(apt_id: int):
     apt = db.session.get(Apartment, apt_id)
     if not apt:
         abort(404)
+    g.ctx.check_apartment(apt)
     data = request.get_json(silent=True) or {}
     content = (data.get("content") or "").strip()
     if not content:
@@ -358,6 +362,7 @@ def recalc_travel(apt_id: int):
     apt = db.session.get(Apartment, apt_id)
     if not apt:
         abort(404)
+    g.ctx.check_apartment(apt)
     if apt.lat is None or apt.lng is None:
         return jsonify({"error": "apartment has no coordinates"}), 400
     from app.services.routing import calculate_for_apartment
