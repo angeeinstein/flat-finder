@@ -367,15 +367,11 @@ def run_import_job(job_id: int) -> None:
             db.session.flush()
             new_apartment = True
 
-        # LLM enhancement — runs on every import (new + refresh) to fill gaps + generate summary.
-        # Completely optional: any error is silently swallowed; description is never modified.
+        # LLM enhancement — enqueued as a separate background job so the import
+        # returns immediately. Fields and summary appear once the LLM job finishes.
         try:
-            from app.services.llm import extract_fields as _llm_extract
-            desc = apt.description or result.text_snapshot or ""
-            if desc.strip():
-                llm_data = _llm_extract(desc, context=_build_llm_context(apt))
-                if llm_data:
-                    _apply_llm_fields(apt, llm_data)
+            from app.services.importer.jobs import enqueue_llm_enhance
+            enqueue_llm_enhance(apt.id)
         except Exception:
             pass
 

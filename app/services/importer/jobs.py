@@ -81,3 +81,39 @@ def delete_import_job_task(import_job_id: int) -> None:
     if job and job.status == ImportJobStatus.DONE:
         db.session.delete(job)
         db.session.commit()
+
+
+def enqueue_llm_enhance(apartment_id: int) -> None:
+    """Enqueue a non-blocking LLM enhancement job for an apartment."""
+    try:
+        q = _get_queue()
+        q.enqueue(
+            "app.services.importer.jobs.llm_enhance_task",
+            apartment_id,
+            job_timeout=120,
+            result_ttl=0,
+            failure_ttl=3600,
+        )
+    except Exception as e:
+        logger.warning("Could not enqueue LLM enhance for apartment %s: %s", apartment_id, e)
+
+
+def llm_enhance_task(apartment_id: int) -> None:
+    """Run LLM field extraction + summary generation for an already-imported apartment."""
+    from app.extensions import db
+    from app.models.apartment import Apartment
+    from app.services.importer.pipeline import _apply_llm_fields, _build_llm_context
+    from app.services.llm import extract_fields
+
+    apt = db.session.get(Apartment, apartment_id)
+    if not apt:
+        return
+    desc = apt.description or ""
+    if not desc.strip():
+        return
+    context = _build_llm_context(apt)
+    fields = extract_fields(desc, context=context)
+    if fields:
+        _apply_llm_fields(apt, fields)
+        db.session.commit()
+        logger.info("LLM enhance done for apartment %s", apartment_id)

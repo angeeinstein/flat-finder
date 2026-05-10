@@ -19,7 +19,7 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-_TIMEOUT = 40           # seconds — generous for CPU-only inference; extended prompt needs more time
+_TIMEOUT = 90           # seconds — runs async in its own RQ job, so a long wait is fine
 _DEFAULT_URL = "http://localhost:11434"
 _DEFAULT_MODEL = "llama3.2:3b"
 
