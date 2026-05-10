@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}AI Settings – {{ app_name }}{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <h2 class="mb-0"><i class="bi bi-stars"></i> AI Extraction</h2>
+  <span class="badge {% if ollama_reachable %}bg-success{% else %}bg-danger{% endif %}">
+    {% if ollama_reachable %}Ollama connected{% else %}Ollama not reachable{% endif %}
+  </span>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-header"><strong>Feature toggles</strong></div>
+      <div class="card-body">
+        <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="form_action" value="toggles">
+          <div class="d-flex flex-column gap-3">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <div class="fw-medium">AI extraction</div>
+                <div class="text-muted small">Master switch — disables all Ollama jobs when off</div>
+              </div>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch"
+                       id="ai_enabled" name="ai_enabled"
+                       {% if ai_enabled %}checked{% endif %}>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <div class="fw-medium">German summary</div>
+                <div class="text-muted small">2–3 sentence AI-generated listing summary</div>
+              </div>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch"
+                       id="ai_summary_enabled" name="ai_summary_enabled"
+                       {% if ai_summary_enabled %}checked{% endif %}>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm mt-3">Save</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-header"><strong>Status</strong></div>
+      <div class="card-body">
+        <p class="mb-1"><span class="text-muted">URL:</span> <code>{{ ollama_url }}</code></p>
+        {% if not ollama_reachable %}
+        <div class="alert alert-warning mt-2 mb-0 small">
+          Ollama is not reachable — AI extraction is currently disabled.<br>
+          Start it with <code>systemctl start ollama</code>, then reload this page.
+        </div>
+        {% else %}
+        <p class="text-muted small mb-0">{{ available_models|length }} model(s) installed.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <strong>Model</strong>
+        <span class="text-muted small">active: <code>{{ current_model }}</code></span>
+      </div>
+      <div class="card-body">
+        {% if available_models %}
+        <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            {% for m in available_models %}
+            <label class="d-flex align-items-center gap-3 py-2 border-bottom">
+              <input type="radio" class="form-check-input flex-shrink-0 mt-0"
+                     name="ollama_model" value="{{ m.name }}"
+                     {% if m.name == current_model %}checked{% endif %}>
+              <span class="flex-grow-1 fw-medium">{{ m.name }}</span>
+              {% if m.size %}
+              <span class="text-muted small">{{ (m.size / 1e9)|round(1) }} GB</span>
+              {% endif %}
+            </label>
+            {% endfor %}
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Save</button>
+        </form>
+        {% else %}
+        <p class="text-muted mb-0">
+          No models installed. Pull one with:<br>
+          <code>ollama pull llama3.2:1b</code>
+        </p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+  <div class="col-lg-5">
+    <div class="card border-0 bg-body-secondary">
+      <div class="card-body small text-muted">
+        <p class="fw-semibold text-body mb-2">About AI extraction</p>
+        <p class="mb-2">When Ollama is running, each imported listing is processed in the background to extract extra fields and generate a short summary:</p>
+        <ul class="mb-2">
+          <li>Pets allowed, internet included</li>
+          <li>Elevator, renovation status, WG-suitability</li>
+          <li>Key money (Ablöse), lease type</li>
+          <li>Year built, laundry available</li>
+          <li>German summary (2–3 sentences)</li>
+        </ul>
+        <p class="mb-2">Extraction runs ~30–60 seconds after import as a background job. Fields already found by the parser are never overwritten.</p>
+        <p class="mb-0"><strong>Model recommendations for CPU-only servers:</strong><br>
+          <code>llama3.2:1b</code> — fast (~35s), good quality<br>
+          <code>llama3.2:3b</code> — slower (~90s), better quality<br>
+          <code>qwen2:0.5b</code> — very fast (~10s), lower quality
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

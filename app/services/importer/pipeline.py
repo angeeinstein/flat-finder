@@ -283,9 +283,11 @@ def _apply_llm_fields(apt: Apartment, fields: dict) -> None:
     summary = fields.get("summary")
     if summary:
         try:
-            apt.ai_summary = str(summary)[:2000]
+            from app.models.settings import AppSetting
+            if AppSetting.get("ai_summary_enabled") != "0":
+                apt.ai_summary = str(summary)[:2000]
         except Exception:
-            pass
+            apt.ai_summary = str(summary)[:2000]
 
 
 def run_import_job(job_id: int) -> None:

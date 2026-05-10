@@ -4,7 +4,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, url_for
+from flask import Blueprint, Response, abort, current_app, flash, g, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.extensions import db
@@ -345,4 +345,81 @@ def compare():
         travel=travel,
         all_apartments=all_apartments,
         TravelMode=TravelMode,
+    )
+
+
+@bp.route("/export.csv")
+@login_required
+def export_csv():
+    """Download all visible apartments as CSV with URL, notes and per-category ratings."""
+    import csv
+    from io import StringIO
+
+    categories = g.ctx.owned_category_query().filter_by(is_active=True).order_by(
+        RatingCategory.display_order, RatingCategory.id
+    ).all()
+    apartments = g.ctx.apartment_query().order_by(Apartment.created_at.desc()).all()
+
+    # Pre-fetch ratings and notes for current user in bulk
+    apt_ids = [a.id for a in apartments]
+    ratings_by_apt: dict[int, dict[int, ApartmentRating]] = {}
+    for r in ApartmentRating.query.filter(
+        ApartmentRating.apartment_id.in_(apt_ids),
+        ApartmentRating.user_id == current_user.id,
+    ).all():
+        ratings_by_apt.setdefault(r.apartment_id, {})[r.category_id] = r
+
+    notes_by_apt: dict[int, list[str]] = {}
+    for n in UserApartmentNote.query.filter(
+        UserApartmentNote.apartment_id.in_(apt_ids),
+        UserApartmentNote.user_id == current_user.id,
+    ).all():
+        notes_by_apt.setdefault(n.apartment_id, []).append(n.content or "")
+
+    statuses_by_apt: dict[int, str] = {}
+    for s in UserApartmentStatus.query.filter(
+        UserApartmentStatus.apartment_id.in_(apt_ids),
+        UserApartmentStatus.user_id == current_user.id,
+    ).all():
+        statuses_by_apt[s.apartment_id] = s.status.value
+
+    si = StringIO()
+    w = csv.writer(si)
+
+    header = ["Title", "URL", "Address", "City", "Total rent (€/mo)",
+              "Rooms", "Area (m²)", "Status", "Score", "Notes"]
+    for cat in categories:
+        header.append(f"Rating: {cat.name}")
+    w.writerow(header)
+
+    for apt in apartments:
+        source = apt.primary_source
+        url = source.url if source else ""
+        price = apt.computed_total_monthly_cost
+        score = calculate_score(apt.id, current_user.id)
+        notes_text = " | ".join(notes_by_apt.get(apt.id, []))
+        status = statuses_by_apt.get(apt.id, "")
+        my_ratings = ratings_by_apt.get(apt.id, {})
+
+        row = [
+            apt.title or f"Apartment #{apt.id}",
+            url,
+            apt.address or "",
+            apt.city or "",
+            f"{price:.0f}" if price is not None else "",
+            str(apt.rooms) if apt.rooms is not None else "",
+            str(apt.living_area_m2) if apt.living_area_m2 is not None else "",
+            status,
+            f"{score:.1f}" if score is not None else "",
+            notes_text,
+        ]
+        for cat in categories:
+            r = my_ratings.get(cat.id)
+            row.append(str(r.score) if r else "")
+        w.writerow(row)
+
+    return Response(
+        si.getvalue(),
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=flat-finder-export.csv"},
     )

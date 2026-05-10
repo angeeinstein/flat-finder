@@ -94,6 +94,13 @@ def enqueue_llm_enhance(apartment_id: int) -> None:
     LLM_QUEUE_MAX so a burst of imports doesn't create an unbounded backlog.
     """
     try:
+        from app.models.settings import AppSetting
+        if AppSetting.get("ai_enabled") == "0":
+            logger.debug("AI extraction disabled — skipping LLM enhance for apartment %s", apartment_id)
+            return
+    except Exception:
+        pass
+    try:
         redis = Redis.from_url(current_app.config["REDIS_URL"])
         q = Queue(QUEUE_NAME, connection=redis)
         job_id = f"llm-enhance-{apartment_id}"

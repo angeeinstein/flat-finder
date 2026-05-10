@@ -1,7 +1,7 @@
 """Settings blueprint: per-context target addresses and rating categories."""
 from __future__ import annotations
 
-from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.extensions import db
@@ -171,6 +171,59 @@ def category_delete(cat_id: int):
     log_action("category_deleted", target_type="RatingCategory", target_id=cat_id, details={"name": name})
     flash(f'Category "{name}" deleted.', "success")
     return redirect(url_for("settings.categories"))
+
+
+@bp.route("/ai", methods=["GET", "POST"])
+@login_required
+def ai_settings():
+    if not current_user.is_admin:
+        abort(403)
+
+    from app.models.settings import AppSetting
+    from app.services.llm import _DEFAULT_MODEL, _DEFAULT_URL, get_available_models
+
+    if request.method == "POST":
+        action = request.form.get("form_action", "model")
+
+        if action == "toggles":
+            ai_enabled = "1" if request.form.get("ai_enabled") == "on" else "0"
+            ai_summary = "1" if request.form.get("ai_summary_enabled") == "on" else "0"
+            AppSetting.set("ai_enabled", ai_enabled,
+                           description="Master toggle: enable AI field extraction via Ollama")
+            AppSetting.set("ai_summary_enabled", ai_summary,
+                           description="Whether AI generates a German listing summary")
+            db.session.commit()
+            log_action("setting_updated", target_type="AppSetting",
+                       details={"ai_enabled": ai_enabled, "ai_summary_enabled": ai_summary})
+            flash("AI feature settings updated.", "success")
+        else:
+            selected = request.form.get("ollama_model", "").strip()
+            if selected:
+                AppSetting.set(
+                    "ollama_model", selected,
+                    description="Ollama model used for AI field extraction and summary generation",
+                )
+                db.session.commit()
+                log_action("setting_updated", target_type="AppSetting",
+                           details={"key": "ollama_model", "value": selected})
+                flash(f"AI model set to {selected}.", "success")
+
+        return redirect(url_for("settings.ai_settings"))
+
+    ollama_url = current_app.config.get("OLLAMA_URL", _DEFAULT_URL)
+    current_model = AppSetting.get("ollama_model") or _DEFAULT_MODEL
+    available = get_available_models(ollama_url)
+    ai_enabled = AppSetting.get("ai_enabled") != "0"
+    ai_summary_enabled = AppSetting.get("ai_summary_enabled") != "0"
+    return render_template(
+        "settings/ai.html",
+        current_model=current_model,
+        available_models=available,
+        ollama_url=ollama_url,
+        ollama_reachable=bool(available),
+        ai_enabled=ai_enabled,
+        ai_summary_enabled=ai_summary_enabled,
+    )
 
 
 @bp.route("/categories/seed-defaults", methods=["POST"])

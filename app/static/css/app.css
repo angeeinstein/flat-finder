@@ -303,21 +303,21 @@ a:hover { text-decoration: underline; }
 /* Sidebar */
 .map-sidebar {
   width: 230px;
+  min-width: 0;        /* allows flex to shrink below content size */
   flex-shrink: 0;
   background: var(--ff-card-bg);
   border: 1px solid var(--ff-border);
   border-radius: var(--bs-border-radius-lg);
   padding: .9rem;
-  overflow-y: auto;
-  overflow-x: hidden;
-  transition: width .2s ease, padding .2s ease, opacity .15s ease, border-width .2s ease;
+  overflow: hidden;    /* always hidden so content clips during transition */
+  transition: width .22s ease, padding .22s ease, opacity .15s ease, border-width .22s ease;
 }
 .map-sidebar.collapsed {
   width: 0;
   padding: 0;
   opacity: 0;
   border-width: 0;
-  overflow: hidden;
+  pointer-events: none;
 }
 .map-filter-label {
   font-size: .72rem;

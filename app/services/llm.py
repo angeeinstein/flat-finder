@@ -74,16 +74,41 @@ def _call_ollama(text: str, context: str, model: str, url: str) -> dict:
     return parsed
 
 
+def get_available_models(ollama_url: str = _DEFAULT_URL) -> list[dict]:
+    """Return list of models available in Ollama. Returns [] on any error."""
+    try:
+        resp = requests.get(f"{ollama_url}/api/tags", timeout=5)
+        resp.raise_for_status()
+        return [
+            {"name": m["name"], "size": m.get("size", 0)}
+            for m in resp.json().get("models", [])
+        ]
+    except Exception:
+        return []
+
+
+def _get_configured_model() -> str:
+    """Read active model from AppSetting, falling back to the compiled default."""
+    try:
+        from app.models.settings import AppSetting
+        return AppSetting.get("ollama_model") or _DEFAULT_MODEL
+    except Exception:
+        return _DEFAULT_MODEL
+
+
 def extract_fields(
     text: str,
     context: str = "",
-    model: str = _DEFAULT_MODEL,
+    model: str | None = None,
     ollama_url: str = _DEFAULT_URL,
 ) -> dict:
     """Extract structured fields and generate a German summary via Ollama.
 
     Returns a (possibly empty) dict — never raises.
+    model=None reads the active model from AppSetting (set in admin UI).
     """
+    if model is None:
+        model = _get_configured_model()
     if not text or not text.strip():
         return {}
     try:
