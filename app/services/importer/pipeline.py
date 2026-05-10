@@ -81,10 +81,16 @@ def _save_snapshot(apt_id: int, source_id: int | None, html: str, text: str | No
     db.session.add(snap)
 
 
-MIN_IMAGE_WIDTH = 500
-MIN_IMAGE_HEIGHT = 350
-MIN_IMAGE_BYTES = 12 * 1024  # 12 KB — anything smaller is almost certainly an icon
-PHASH_MIN_DISTANCE = 4  # Hamming distance below this means "near-duplicate"
+# Generous minimums: only filter out things that clearly aren't gallery photos
+# (icons, sponsor badges, tracking pixels). Real listing photos — even compressed
+# JPEGs — are well above these thresholds.
+MIN_IMAGE_WIDTH = 320
+MIN_IMAGE_HEIGHT = 220
+MIN_IMAGE_BYTES = 4 * 1024  # 4 KB
+# Hamming distance below this counts as "near-duplicate"; raise it slightly
+# so that resized variants of the same photo collapse together but distinct
+# rooms (which often share lighting/walls) don't.
+PHASH_MIN_DISTANCE = 2
 
 
 def _phash_close(new_hash: str | None, existing: list[str]) -> bool:

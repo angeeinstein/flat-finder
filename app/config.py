@@ -1,11 +1,22 @@
 """Configuration objects for flat-finder."""
 from __future__ import annotations
 
+import json
 import os
 import secrets
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+
+def _utf8_json_dumps(obj) -> str:
+    """JSON serializer that emits real UTF-8 instead of \\uXXXX escapes.
+
+    Required for PostgreSQL clusters created with SQL_ASCII encoding: JSONB
+    rejects \\uXXXX escape sequences that don't fit the server encoding, but
+    accepts the same characters when sent as raw UTF-8 bytes.
+    """
+    return json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
 
 
 def _load_env() -> None:
@@ -36,6 +47,9 @@ class BaseConfig:
         SQLALCHEMY_ENGINE_OPTIONS = {
             "pool_pre_ping": True,
             "connect_args": {"client_encoding": "utf8"},
+            # Send real UTF-8 bytes instead of \\uXXXX escapes — JSONB on
+            # SQL_ASCII clusters rejects the escape form.
+            "json_serializer": _utf8_json_dumps,
         }
     else:
         SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}

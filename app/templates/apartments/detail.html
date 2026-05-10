@@ -57,11 +57,23 @@
       <div class="gallery-grid gallery-detail mb-3">
         {% set imgs = apt.images[:5] %}
         {% for img in imgs %}
-          <a href="{{ url_for('apartments.gallery', apt_id=apt.id) }}" class="gallery-cell">
+          <a href="{{ url_for('api.image_full', image_id=img.id) }}"
+             class="gallery-cell"
+             data-lightbox-group="apt-{{ apt.id }}"
+             data-lightbox-full="{{ url_for('api.image_full', image_id=img.id) }}">
             <img src="{{ url_for('api.image_thumbnail', image_id=img.id) }}" alt="" loading="lazy">
             {% if loop.last and apt.images|length > 5 %}
               <div class="more-overlay"><i class="bi bi-images me-1"></i> +{{ apt.images|length - 5 }} more</div>
             {% endif %}
+          </a>
+        {% endfor %}
+        {# Hidden cells so the lightbox group also includes images 6+ #}
+        {% for img in apt.images[5:] %}
+          <a href="{{ url_for('api.image_full', image_id=img.id) }}"
+             class="d-none"
+             data-lightbox-group="apt-{{ apt.id }}"
+             data-lightbox-full="{{ url_for('api.image_full', image_id=img.id) }}">
+            <img src="{{ url_for('api.image_thumbnail', image_id=img.id) }}" alt="">
           </a>
         {% endfor %}
       </div>

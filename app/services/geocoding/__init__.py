@@ -26,3 +26,21 @@ def geocode(address: str) -> tuple[float, float] | None:
     except Exception:
         current_app.logger.exception("Geocoding failed")
         return None
+
+
+def search(query: str, limit: int = 6) -> list[dict]:
+    if not query or len(query.strip()) < 3:
+        return []
+    try:
+        provider = get_provider()
+    except Exception:
+        current_app.logger.exception("Geocoding provider init failed")
+        return []
+    fn = getattr(provider, "search", None)
+    if fn is None:
+        return []
+    try:
+        return fn(query, limit=limit)
+    except Exception:
+        current_app.logger.exception("Address search failed")
+        return []

@@ -7,8 +7,11 @@
 <div class="row g-2">
   {% for img in apt.images %}
     <div class="col-6 col-md-4 col-lg-3">
-      <a href="{{ url_for('api.image_thumbnail', image_id=img.id) }}" target="_blank" rel="noopener noreferrer">
-        <img class="gallery-thumb" src="{{ url_for('api.image_thumbnail', image_id=img.id) }}" alt="">
+      <a href="{{ url_for('api.image_full', image_id=img.id) }}"
+         class="gallery-cell d-block"
+         data-lightbox-group="gallery-{{ apt.id }}"
+         data-lightbox-full="{{ url_for('api.image_full', image_id=img.id) }}">
+        <img class="gallery-thumb" src="{{ url_for('api.image_thumbnail', image_id=img.id) }}" alt="" loading="lazy">
       </a>
     </div>
   {% else %}

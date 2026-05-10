@@ -66,46 +66,56 @@ class WillhabenImporter(GenericImporter):
         return result
 
     def _extract_willhaben_images(self, data: Any, base_url: str, result: ImporterResult) -> None:
-        seen = set(result.image_urls)
+        seen: set[str] = set()
         gallery: list[str] = []
 
-        # advertImageList -> { advertImage: [ { mainImageUrl, referenceImageUrl } ] }
-        image_lists: list[Any] = []
-        _walk(data, "advertImageList", image_lists)
-        for il in image_lists:
-            if isinstance(il, dict):
-                items = il.get("advertImage") or il.get("imageList") or []
-            elif isinstance(il, list):
-                items = il
-            else:
-                continue
-            for item in items:
-                if not isinstance(item, dict):
+        # Pull every "advertImageList"-shaped node we can find. Keys we care about
+        # vary by category: advertImage, imageList, photos, attachmentImages, etc.
+        for key in ("advertImageList", "imageList", "photos", "advertImages", "attachments"):
+            buckets: list[Any] = []
+            _walk(data, key, buckets)
+            for il in buckets:
+                if isinstance(il, dict):
+                    items = (
+                        il.get("advertImage") or il.get("imageList")
+                        or il.get("attachment") or il.get("photos")
+                        or il.get("items") or []
+                    )
+                elif isinstance(il, list):
+                    items = il
+                else:
                     continue
-                # Prefer the largest variant
-                for k in ("referenceImageUrl", "mainImageUrl", "thumbnailImageUrl", "url"):
-                    v = item.get(k)
-                    if isinstance(v, str):
-                        absolute = urljoin(base_url, v)
-                        if absolute in seen:
+                for item in items:
+                    if not isinstance(item, dict):
+                        # Some lists are just URL strings.
+                        if isinstance(item, str):
+                            self._add_url(item, base_url, seen, gallery)
+                        continue
+                    for k in (
+                        "referenceImageUrl", "mainImageUrl", "url",
+                        "fullSizeUrl", "originalUrl", "src",
+                    ):
+                        v = item.get(k)
+                        if isinstance(v, str):
+                            self._add_url(v, base_url, seen, gallery)
                             break
-                        if not _looks_like_property_image(absolute):
-                            break
-                        seen.add(absolute)
-                        gallery.append(absolute)
-                        break
 
-        # Fallback: walk for any URLs hosted on willhaben image CDNs
-        if not gallery:
-            urls: list[str] = []
-            self._collect_image_urls(data, urls, seen)
-            gallery.extend(urls)
+        # If structured extraction produced little, walk the whole state for any
+        # URL hosted on a willhaben image CDN.
+        if len(gallery) < 8:
+            self._collect_image_urls(data, gallery, seen)
 
         if gallery:
-            # When willhaben publishes an authoritative gallery, replace the
-            # generic-collected URLs entirely — those are mostly low-res variants
-            # of the same images that pollute the results.
             result.image_urls = gallery[:50]
+
+    def _add_url(self, src: str, base_url: str, seen: set[str], out: list[str]) -> None:
+        absolute = urljoin(base_url, src)
+        if absolute in seen:
+            return
+        if not _looks_like_property_image(absolute):
+            return
+        seen.add(absolute)
+        out.append(absolute)
 
     def _collect_image_urls(self, node: Any, out: list[str], seen: set[str]) -> None:
         if isinstance(node, str):

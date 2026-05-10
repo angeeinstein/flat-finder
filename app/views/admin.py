@@ -201,6 +201,12 @@ def target_address_new():
             coords = geocode(t.address)
             if coords:
                 t.lat, t.lng = coords
+            else:
+                flash(
+                    "Could not geocode this address. Save anyway, then enter "
+                    "coordinates manually or use the autocomplete suggestions.",
+                    "warning",
+                )
         db.session.add(t)
         db.session.commit()
         log_action("target_address_created", target_type="TargetAddress", target_id=t.id)
@@ -216,11 +222,22 @@ def target_address_edit(tid: int):
         abort(404)
     form = TargetAddressForm(obj=t)
     if form.validate_on_submit():
+        addr = form.address.data.strip()
+        addr_changed = (t.address or "") != addr
         t.name = form.name.data.strip()
-        t.address = form.address.data.strip()
+        t.address = addr
         t.lat = form.lat.data
         t.lng = form.lng.data
         t.is_active = form.is_active.data
+        # Re-geocode whenever the address text changes or coords are missing.
+        if (t.lat is None or t.lng is None) or addr_changed:
+            from app.services.geocoding import geocode
+
+            coords = geocode(t.address)
+            if coords:
+                t.lat, t.lng = coords
+            else:
+                flash("Could not geocode this address — coordinates not updated.", "warning")
         db.session.commit()
         log_action("target_address_updated", target_type="TargetAddress", target_id=t.id)
         flash("Target address updated.", "success")

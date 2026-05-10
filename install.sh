@@ -524,6 +524,47 @@ show_logs() {
     journalctl -u "$WEB_SERVICE" -u "$WORKER_SERVICE" -n 200 --no-pager
 }
 
+# ---------- fix DB encoding ----------
+fix_db_encoding() {
+    log_step "Migrating database to UTF-8 encoding"
+    local db_url db_user db_pass db_host db_port db_name enc
+    db_url="$(grep '^DATABASE_URL=' "$ENV_FILE" | cut -d= -f2-)"
+    db_user="$(echo "$db_url" | sed -E 's#postgresql://([^:]+):.*#\1#')"
+    db_pass="$(echo "$db_url" | sed -E 's#postgresql://[^:]+:([^@]+)@.*#\1#')"
+    db_host="$(echo "$db_url" | sed -E 's#postgresql://[^@]+@([^:/]+).*#\1#')"
+    db_name="$(echo "$db_url" | sed -E 's#.*/([^/?]+)(\?.*)?$#\1#')"
+
+    enc="$(sudo -u postgres psql -tAc "SELECT pg_encoding_to_char(encoding) FROM pg_database WHERE datname = '$db_name'" | tr -d ' ')"
+    log_info "Current database encoding: ${enc:-unknown}"
+    if [[ "$enc" == "UTF8" ]]; then
+        log_ok "Already UTF-8; nothing to do."
+        return 0
+    fi
+
+    confirm "Recreate '$db_name' with UTF-8 encoding? Services will be stopped briefly." "N" || return 1
+
+    local ts dump
+    ts="$(date +%Y%m%d_%H%M%S)"
+    dump="$DATA_DIR/backups/encoding-fix-$ts.sql"
+    mkdir -p "$DATA_DIR/backups"
+
+    systemctl stop "$WEB_SERVICE" "$WORKER_SERVICE" || true
+
+    log_info "Dumping current database to $dump"
+    PGPASSWORD="$db_pass" pg_dump -h "$db_host" -U "$db_user" "$db_name" --encoding=UTF8 > "$dump"
+    log_ok "Backup written to $dump"
+
+    sudo -u postgres dropdb "$db_name"
+    sudo -u postgres createdb -O "$db_user" --encoding=UTF8 --lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --template=template0 "$db_name"
+    log_ok "Recreated $db_name with UTF-8."
+
+    PGPASSWORD="$db_pass" psql -h "$db_host" -U "$db_user" "$db_name" < "$dump" >/dev/null
+    log_ok "Restored data from $dump"
+
+    systemctl start "$WEB_SERVICE" "$WORKER_SERVICE"
+    log_ok "DB encoding migration complete."
+}
+
 # ---------- menu ----------
 existing_install_menu() {
     cat <<EOF
@@ -544,11 +585,12 @@ What would you like to do?
  11) Restore backup
  12) Reconfigure Nginx
  13) Configure HTTPS (Let's Encrypt)
- 14) Exit
+ 14) Migrate database to UTF-8 encoding
+ 15) Exit
 
 EOF
     local choice
-    read -rp "Choice [1-14]: " choice || true
+    read -rp "Choice [1-15]: " choice || true
     case "$choice" in
         1)
             update_self
@@ -575,7 +617,8 @@ EOF
             echo "$email"   > "$CONFIG_DIR/.email"
             setup_https
             ;;
-       14|q|Q|"") log_info "Bye."; exit 0 ;;
+       14) fix_db_encoding ;;
+       15|q|Q|"") log_info "Bye."; exit 0 ;;
         *) log_warn "Invalid choice." ;;
     esac
 }

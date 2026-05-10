@@ -18,7 +18,20 @@
       <div class="col-md-3">{{ render_field(form.deposit) }}</div>
       <div class="col-md-3">{{ render_field(form.commission) }}</div>
 
-      <div class="col-md-8">{{ render_field(form.address) }}</div>
+      <div class="col-md-8">
+        <div class="mb-3">
+          {{ form.address.label(class_="form-label") }}
+          {{ form.address(
+              class_="form-control" + (" is-invalid" if form.address.errors else ""),
+              placeholder="Start typing… suggestions will appear",
+              **{"data-address-autocomplete": "true",
+                 "data-lat-target": "#" + form.lat.id,
+                 "data-lng-target": "#" + form.lng.id,
+                 "autocomplete": "off"}
+          ) }}
+          {% for err in form.address.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+        </div>
+      </div>
       <div class="col-md-2">{{ render_field(form.postal_code) }}</div>
       <div class="col-md-2">{{ render_field(form.country) }}</div>
       <div class="col-md-4">{{ render_field(form.city) }}</div>

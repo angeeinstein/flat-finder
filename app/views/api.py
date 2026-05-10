@@ -140,6 +140,27 @@ def image_thumbnail(image_id: int):
     abort(404)
 
 
+@bp.route("/images/<int:image_id>/full")
+def image_full(image_id: int):
+    """Serve the full-size original (used by the lightbox viewer)."""
+    from pathlib import Path
+    from flask import current_app, send_file
+    from app.models.listing import ApartmentImage
+
+    img = db.session.get(ApartmentImage, image_id)
+    if not img:
+        abort(404)
+    for p in (img.local_path, img.thumbnail_path):
+        if not p:
+            continue
+        path = Path(p)
+        if not path.is_absolute():
+            path = Path(current_app.config["IMAGE_DIR"]) / p
+        if path.is_file():
+            return send_file(str(path))
+    abort(404)
+
+
 # -------------------- ratings --------------------
 
 @bp.route("/apartments/<int:apt_id>/rate", methods=["POST"])
@@ -300,6 +321,33 @@ def delete_note(note_id: int):
 
 
 # -------------------- travel time recalculation --------------------
+
+@bp.route("/geocode/search")
+def geocode_search():
+    """Address autocomplete suggestions (Nominatim-backed)."""
+    from app.services.geocoding import search as geo_search
+
+    q = (request.args.get("q") or "").strip()
+    if len(q) < 3:
+        return jsonify({"results": []})
+    results = geo_search(q, limit=6)
+    return jsonify({"results": results})
+
+
+@bp.route("/geocode")
+def geocode_one():
+    """Resolve a single address to coordinates (synchronous)."""
+    from app.services.geocoding import geocode as geocode_fn
+
+    address = (request.args.get("address") or "").strip()
+    if not address:
+        return jsonify({"error": "missing address"}), 400
+    coords = geocode_fn(address)
+    if not coords:
+        return jsonify({"found": False}), 404
+    lat, lng = coords
+    return jsonify({"found": True, "lat": lat, "lng": lng})
+
 
 @bp.route("/travel-times/<int:apt_id>/recalculate", methods=["POST"])
 def recalc_travel(apt_id: int):
