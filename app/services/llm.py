@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 
 import requests
 
@@ -54,15 +55,19 @@ Return ONLY the JSON object. No explanation, no markdown."""
 
 
 def _call_ollama(text: str, context: str, model: str, url: str) -> dict:
-    payload = {
-        "model": model,
-        "prompt": _PROMPT.format(text=text[:3500], context=context[:600]),
-        "stream": False,
-        "format": "json",
-    }
+    prompt = _PROMPT.format(text=text[:3500], context=context[:600])
+    payload = {"model": model, "prompt": prompt, "stream": False, "format": "json"}
     resp = requests.post(f"{url}/api/generate", json=payload, timeout=_TIMEOUT)
+    if resp.status_code == 500:
+        # Some Ollama versions / model states reject format:"json"; retry without it.
+        logger.debug("Ollama 500 with format:json — retrying without format constraint")
+        payload.pop("format")
+        resp = requests.post(f"{url}/api/generate", json=payload, timeout=_TIMEOUT)
     resp.raise_for_status()
-    raw = resp.json().get("response", "")
+    raw = resp.json().get("response", "").strip()
+    # Strip markdown code fences the model may add when format:"json" is absent
+    raw = re.sub(r"^```(?:json)?\s*", "", raw)
+    raw = re.sub(r"\s*```$", "", raw.strip())
     parsed = json.loads(raw)
     if not isinstance(parsed, dict):
         raise ValueError(f"Expected dict, got {type(parsed).__name__}")
