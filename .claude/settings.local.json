@@ -10,7 +10,8 @@
       "Bash(venv/Scripts/python -m pytest -q)",
       "Bash(venv/Scripts/python -m pytest tests/test_importers.py -x -q)",
       "Bash(venv/Scripts/python -m pytest -x -q)",
-      "Bash(.venv\\\\Scripts\\\\python -m pytest tests/ -q)"
+      "Bash(.venv\\\\Scripts\\\\python -m pytest tests/ -q)",
+      "WebFetch(domain:www.willhaben.at)"
     ]
   }
 }

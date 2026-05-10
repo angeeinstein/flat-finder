@@ -81,15 +81,18 @@ def _save_snapshot(apt_id: int, source_id: int | None, html: str, text: str | No
     db.session.add(snap)
 
 
-# Generous minimums: only filter out things that clearly aren't gallery photos
-# (icons, sponsor badges, tracking pixels). Real listing photos — even compressed
-# JPEGs — are well above these thresholds.
+# Minimum thresholds for regular (colour) photos.
 MIN_IMAGE_WIDTH = 320
-MIN_IMAGE_HEIGHT = 220
+MIN_IMAGE_HEIGHT = 200
 MIN_IMAGE_BYTES = 4 * 1024  # 4 KB
-# Hamming distance below this counts as "near-duplicate"; raise it slightly
-# so that resized variants of the same photo collapse together but distinct
-# rooms (which often share lighting/walls) don't.
+# Floor plans / grayscale diagrams are often smaller and more compressible than
+# room photos, so we use a separate, more lenient threshold for them.
+MIN_FLOOR_PLAN_WIDTH = 150
+MIN_FLOOR_PLAN_HEIGHT = 100
+# Hamming distance below this counts as "near-duplicate" for colour photos.
+# Grayscale images (floor plans) are exempt from phash dedup because:
+#  a) they have very different hashes from photos, so false-positives are rare,
+#  b) a mostly-white floor plan and a washed-out photo could share a close hash.
 PHASH_MIN_DISTANCE = 2
 
 
@@ -137,18 +140,26 @@ def _download_images(apt_id: int, urls: list[str]) -> int:
             continue
 
         w, h = meta.get("width"), meta.get("height")
-        # Reject low-quality variants / thumbnails masquerading as full photos.
-        if w is not None and h is not None and (w < MIN_IMAGE_WIDTH or h < MIN_IMAGE_HEIGHT):
+        is_grayscale = meta.get("is_grayscale", False)
+
+        # Floor plans and line-art diagrams (grayscale) use a lower size threshold
+        # because they are often smaller than room photos but still worth keeping.
+        min_w = MIN_FLOOR_PLAN_WIDTH if is_grayscale else MIN_IMAGE_WIDTH
+        min_h = MIN_FLOOR_PLAN_HEIGHT if is_grayscale else MIN_IMAGE_HEIGHT
+        if w is not None and h is not None and (w < min_w or h < min_h):
             logger.debug("Skipped %s: below min size (%sx%s)", url, w, h)
             continue
 
-        # Reject near-duplicates of images we already saved this batch.
+        # Perceptual-hash dedup: only apply to colour photos.
+        # Grayscale images are exempt because a mostly-white floor plan can share
+        # a close phash with other light-toned images, causing false positives.
         phash = meta.get("perceptual_hash")
-        if _phash_close(phash, saved_hashes):
-            logger.debug("Skipped %s: near-duplicate (phash=%s)", url, phash)
-            continue
-        if phash:
-            saved_hashes.append(phash)
+        if not is_grayscale:
+            if _phash_close(phash, saved_hashes):
+                logger.debug("Skipped %s: near-duplicate (phash=%s)", url, phash)
+                continue
+            if phash:
+                saved_hashes.append(phash)
 
         db.session.add(ApartmentImage(
             apartment_id=apt_id,

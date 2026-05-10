@@ -43,12 +43,25 @@ def save_image(apt_id: int, url: str, content: bytes) -> dict:
     width = height = None
     phash = None
 
+    is_grayscale = False
     if HAS_PIL:
         try:
             img = Image.open(io.BytesIO(content))
             img.load()
             width, height = img.size
             ext = (img.format or "JPEG").lower().replace("jpeg", "jpg")
+            # Detect floor-plan-like images (grayscale / 1-bit / monochrome palette)
+            is_grayscale = img.mode in ("L", "1", "LA", "P")
+            if img.mode == "P" and img.palette:
+                # Paletted image — check if it's effectively grayscale
+                try:
+                    converted = img.convert("RGB")
+                    r, g, b = converted.split()
+                    is_grayscale = (
+                        list(r.getdata()) == list(g.getdata()) == list(b.getdata())
+                    )
+                except Exception:
+                    pass
             if HAS_IMAGEHASH:
                 try:
                     phash = str(imagehash.phash(img.convert("RGB")))
@@ -84,6 +97,7 @@ def save_image(apt_id: int, url: str, content: bytes) -> dict:
         "height": height,
         "file_size": len(content),
         "perceptual_hash": phash,
+        "is_grayscale": is_grayscale,
     }
 
 

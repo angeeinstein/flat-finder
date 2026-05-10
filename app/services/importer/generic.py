@@ -30,6 +30,15 @@ LOGO_HINT_RE = re.compile(
     r")(?:[/_\-\.]|$)",
     re.IGNORECASE,
 )
+# Positive allowlist: if a URL contains these terms it is clearly a floor plan or
+# property document — keep it regardless of what LOGO_HINT_RE would say.
+FLOOR_PLAN_RE = re.compile(
+    r"(?:^|[/_\-\.])("
+    r"grundriss|floorplan|floor[_\-]?plan|lageplan|etageplan|raumplan|"
+    r"floor[_\-]?map|site[_\-]?plan|property[_\-]?plan"
+    r")(?:[/_\-\.]|$)",
+    re.IGNORECASE,
+)
 SKIP_EXT_RE = re.compile(r"\.(?:svg|ico|gif)(?:\?|#|$)", re.IGNORECASE)
 IMAGE_EXT_RE = re.compile(r"\.(?:jpe?g|png|webp|avif)(?:\?|#|$)", re.IGNORECASE)
 # Heuristic: image URLs often contain dimension hints like "300x200" or "_400_"
@@ -98,6 +107,9 @@ def _looks_like_property_image(url: str) -> bool:
         return False
     if SKIP_EXT_RE.search(url):
         return False
+    # Positive allowlist: floor plan / property document keywords always pass
+    if FLOOR_PLAN_RE.search(url):
+        return True
     # Allow common image extensions OR no extension (CDNs sometimes drop it)
     if not IMAGE_EXT_RE.search(url) and not re.search(r"/image[s]?/|/photo[s]?/|/media/", url, re.IGNORECASE):
         # If URL has no clear image extension and no image-y path, skip
