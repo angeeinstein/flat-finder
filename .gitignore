@@ -45,3 +45,9 @@ logs/
 
 # Migrations versions are tracked, but not the alembic cache
 migrations/__pycache__/
+
+# Analysis/debug artifacts from site inspection scripts
+_*_state.json
+_*_apollo.json
+_*___*.json
+_*_page.html

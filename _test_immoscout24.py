@@ -1,40 +1,51 @@
-"""Test the ImmoScout24 importer against the saved page HTML."""
+"""Test the ImmoScout24 importer — fetches live and runs extraction."""
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 
+import requests as _requests
 from app import create_app
 from app.services.importer.immoscout24 import ImmoScout24Importer
 
-URL = "https://www.immobilienscout24.at/expose/69fd592474ad1b054f4b8814"
+URLS = sys.argv[1:] or [
+    "https://www.immobilienscout24.at/expose/69fd592474ad1b054f4b8814",
+    "https://www.immobilienscout24.at/expose/69f90df0897bd2a11f632792",
+    "https://www.immobilienscout24.at/expose/69f07f054631ea0b033ac1fa",
+]
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "de-AT,de;q=0.9,en;q=0.8",
+}
 
 app = create_app()
 with app.app_context():
     imp = ImmoScout24Importer()
-    print(f"can_handle: {imp.can_handle(URL)}")
 
-    # Use cached HTML so we don't re-fetch
-    html = open("_immoscout24_page.html", encoding="utf-8").read()
+    for url in URLS:
+        print(f"\n{'='*70}")
+        print(f"URL: {url}")
+        resp = _requests.get(url, headers=HEADERS, timeout=20)
+        print(f"HTTP {resp.status_code}  ({len(resp.text)} bytes)")
+        if resp.status_code != 200:
+            print("  SKIP — non-200 response")
+            continue
 
-    class FakeResp:
-        status_code = 200
-        text = html
-        url = URL
+        result = imp.extract(url, resp.text, resp)
 
-    result = imp.extract(URL, html, FakeResp())
+        print(f"platform:      {result.platform}")
+        print(f"external_id:   {result.external_id}")
+        print(f"canonical_url: {result.canonical_url}")
+        print(f"images:        {len(result.image_urls)}")
+        for i, u in enumerate(result.image_urls):
+            print(f"  [{i+1:2d}] {u[:110]}")
 
-    print(f"\n=== RESULT ===")
-    print(f"platform:     {result.platform}")
-    print(f"external_id:  {result.external_id}")
-    print(f"canonical_url:{result.canonical_url}")
-    print(f"images:        {len(result.image_urls)} URLs")
-    for i, u in enumerate(result.image_urls):
-        print(f"  [{i+1:2d}] {u[:100]}")
+        print("fields:")
+        for k, v in sorted(result.fields.items()):
+            if v is not None:
+                print(f"  {k:30s} = {repr(v)[:110]}")
 
-    print(f"\n=== FIELDS ===")
-    for k, v in sorted(result.fields.items()):
-        if v is not None:
-            print(f"  {k:30s} = {repr(v)[:120]}")
-
-    print(f"\n=== DESCRIPTION (first 500 chars) ===")
-    desc = result.fields.get("description") or result.text_snapshot or ""
-    print(desc[:500])
+        desc = result.fields.get("description") or ""
+        print(f"description:   {desc[:200].replace(chr(10), ' ')}")

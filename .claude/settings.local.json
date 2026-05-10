@@ -13,7 +13,12 @@
       "Bash(.venv\\\\Scripts\\\\python -m pytest tests/ -q)",
       "WebFetch(domain:www.willhaben.at)",
       "Bash(python _analyze_immoscout24.py)",
-      "Bash(.\\\\venv\\\\Scripts\\\\python.exe _analyze_immoscout24.py)"
+      "Bash(.\\\\venv\\\\Scripts\\\\python.exe _analyze_immoscout24.py)",
+      "PowerShell(cd \"c:\\\\Users\\\\ichfr\\\\Documents\\\\Projekte\\\\VSCode\\\\flat-finder\"; .\\\\venv\\\\Scripts\\\\python.exe _test_immoscout24.py \"https://www.immobilienscout24.at/expose/69cb8b98a9af9d4493d68287\" \"https://www.immobilienscout24.at/expose/69fd5b4374ad1b054f4b896e\" 2>&1 | Where-Object { $_ -notmatch \"UserWarning|flask_limiter|storage backend|Zeile|CategoryInfo|FullyQualifiedErrorId|warnings.warn\" })",
+      "PowerShell(cd \"c:\\\\Users\\\\ichfr\\\\Documents\\\\Projekte\\\\VSCode\\\\flat-finder\"; .\\\\venv\\\\Scripts\\\\python.exe _check_is24_images.py 2>&1 | Where-Object { $_ -notmatch \"UserWarning|flask_limiter|storage|Zeile|CategoryInfo|FullyQualifiedErrorId|warnings\" })",
+      "Bash(python _test_willhaben.py)",
+      "Bash(.venv\\\\Scripts\\\\python _test_willhaben.py)",
+      "Bash(venv/Scripts/python _test_willhaben.py)"
     ]
   }
 }

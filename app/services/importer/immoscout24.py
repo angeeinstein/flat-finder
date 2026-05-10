@@ -45,12 +45,21 @@ def _parse_euro_amount(s: str) -> float | None:
         return None
     s = re.sub(r"[€EUReur\s]", "", s)
     if "," in s and "." in s:
+        # Mixed: German format "1.200,60" → comma is decimal, dot is thousands
         if s.rfind(",") > s.rfind("."):
             s = s.replace(".", "").replace(",", ".")
         else:
             s = s.replace(",", "")
     elif "," in s:
+        # Comma only: "252,04" → decimal
         s = s.replace(",", ".")
+    elif "." in s:
+        # Dot only: could be German thousands ("1.300") or English decimal ("15.42").
+        # Heuristic: if the fragment after the last dot is exactly 3 digits it is a
+        # thousands separator (German), not a decimal point.
+        after_dot = s.rsplit(".", 1)[-1]
+        if len(after_dot) == 3 and after_dot.isdigit():
+            s = s.replace(".", "")
     try:
         return float(s)
     except ValueError:

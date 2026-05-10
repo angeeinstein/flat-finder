@@ -189,6 +189,13 @@ class WillhabenImporter(GenericImporter):
         country_raw = (aad.get("country") or "").strip()
         country_en = _COUNTRY_DE_EN.get(country_raw, country_raw or None)
 
+        # Detect district-only values like "Wien, 14. Bezirk, Penzing" — sellers can
+        # blur their map location, leaving only a district name in addressLines[0].
+        if street and ("Bezirk" in street or street.startswith(("Wien,", "Graz,", "Linz,", "Salzburg,"))):
+            result.fields["address_is_approximate"] = True
+            result.fields.pop("address", None)  # discard any guess from the generic extractor
+            street = None  # don't store the district label as an address
+
         # Always override — advertAddressDetails is authoritative for Willhaben
         if street:
             result.fields["address"] = street
@@ -254,6 +261,88 @@ class WillhabenImporter(GenericImporter):
                     result.fields["lng"] = float(parts_c[1].strip())
                 except ValueError:
                     pass
+
+        # ---- Floor ----
+        floor_val = first("FLOOR")
+        if floor_val:
+            result.fields.setdefault("floor", floor_val)
+
+        # ---- Heating ----
+        heating = first("HEATING")
+        if heating:
+            result.fields.setdefault("heating_type", heating)
+
+        # ---- Energy certificate ----
+        hwb = first("ENERGY_HWB")
+        hwb_class = first("ENERGY_HWB_CLASS")
+        fgee = first("ENERGY_FGEE")
+        fgee_class = first("ENERGY_FGEE_CLASS")
+        energy_parts: list[str] = []
+        if hwb:
+            energy_parts.append(f"HWB {hwb} kWh/m²a")
+        if hwb_class:
+            energy_parts.append(f"Klasse {hwb_class}")
+        if fgee:
+            energy_parts.append(f"fGEE {fgee}")
+        if energy_parts:
+            result.fields.setdefault("energy_cert_info", ", ".join(energy_parts))
+
+        # ---- Lease duration ----
+        term_limit = first("DURATION/HASTERMLIMIT")
+        if term_limit:
+            is_limited = term_limit.lower() in ("befristet", "true", "1", "yes")
+            result.fields.setdefault("lease_duration_limited", is_limited)
+        term_text = first("DURATION/TERMLIMITTEXT")
+        if term_text:
+            result.fields.setdefault("lease_duration_text", term_text)
+
+        # ---- Deposit ----
+        deposit_raw = first("ADDITIONAL_COST/DEPOSIT")
+        if deposit_raw:
+            try:
+                result.fields.setdefault("deposit", float(deposit_raw.replace(",", ".")))
+            except ValueError:
+                pass
+
+        # ---- Operating costs ----
+        opex_raw = first("RENTAL_PRICE/ADDITIONAL_COST_NET", "RENTAL_PRICE/ADDITIONAL_COSTS_NET")
+        if opex_raw:
+            try:
+                result.fields.setdefault(
+                    "operating_costs", float(opex_raw.replace(".", "").replace(",", "."))
+                )
+            except ValueError:
+                pass
+
+        # ---- Commission ----
+        fee_text = first("ADDITIONAL_COST/FEE") or ""
+        if fee_text:
+            lower_fee = fee_text.lower()
+            if any(kw in lower_fee for kw in ("provisionsfrei", "erstauftraggeberprinzip", "keine provision")):
+                result.fields.setdefault("commission", 0.0)
+
+        # ---- Outdoor spaces ----
+        area_type = first("FREE_AREA/FREE_AREA_TYPE", "FREE_AREA_TYPE")
+        if area_type:
+            lower = area_type.lower()
+            if "balkon" in lower:
+                result.fields.setdefault("has_balcony", True)
+            if "terrasse" in lower:
+                result.fields.setdefault("has_terrace", True)
+            if "garten" in lower or "garden" in lower:
+                result.fields.setdefault("has_garden", True)
+            if "loggia" in lower:
+                result.fields.setdefault("has_balcony", True)
+
+        # ---- Contact ----
+        contact_name = first("CONTACT/NAME")
+        if contact_name:
+            result.fields.setdefault("contact_name", contact_name)
+        phone = first("CONTACT/PHONE")
+        company = first("CONTACT/COMPANYNAME", "CONTACT/COMPANY")
+        contact_parts = [p for p in (phone, company) if p]
+        if contact_parts:
+            result.fields.setdefault("contact_info", " | ".join(contact_parts))
 
     # ------------------------------------------------------------------ description
 
