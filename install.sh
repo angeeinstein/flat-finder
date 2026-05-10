@@ -242,6 +242,14 @@ setup_env() {
     secret="$(generate_secret)"
     db_pass="$(generate_secret)"
 
+    # Optional API keys — prompt if interactive
+    local ors_key=""
+    if [[ -t 0 ]]; then
+        echo ""
+        echo "Optional: OpenRouteService isochrone maps (free key at openrouteservice.org)"
+        read -rp "OPENROUTESERVICE_API_KEY (leave blank to skip): " ors_key || true
+    fi
+
     install -m 0640 -o root -g "$APP_USER" /dev/null "$ENV_FILE"
     cat > "$ENV_FILE" <<EOF
 PYTHONUTF8=1
@@ -261,6 +269,13 @@ NOMINATIM_USER_AGENT="flat-finder/1.0 (admin@${domain})"
 LOGIN_RATE_LIMIT="10 per minute"
 LOG_LEVEL=INFO
 DEFAULT_SCORE_DISPLAY=both
+
+# Optional: OpenRouteService API key for isochrone (reachability zone) overlay on the map.
+# Get a free key at https://openrouteservice.org (no credit card, 500 req/day).
+OPENROUTESERVICE_API_KEY=${ors_key}
+
+# Optional: Override the Ollama server URL (default: http://localhost:11434)
+# OLLAMA_URL=http://localhost:11434
 EOF
     chmod 0640 "$ENV_FILE"
     chown root:"$APP_USER" "$ENV_FILE"
@@ -304,6 +319,16 @@ setup_redis() {
     log_step "Enabling Redis"
     systemctl enable --now redis-server || systemctl enable --now redis
     log_ok "Redis enabled."
+}
+
+# ---------- flask helper ----------
+run_flask_cmd() {
+    # Usage: run_flask_cmd "command arg1 arg2"
+    sudo -u "$APP_USER" bash -c "
+        cd '$INSTALL_DIR'
+        set -a; . '$ENV_FILE'; set +a
+        FLASK_APP=wsgi:app '$INSTALL_DIR/venv/bin/flask' $*
+    "
 }
 
 # ---------- migrations ----------
@@ -416,11 +441,47 @@ Useful commands:
   systemctl status ${WEB_SERVICE}
   systemctl status ${WORKER_SERVICE}
   journalctl -u ${WEB_SERVICE} -f
-  sudo -u ${APP_USER} ${INSTALL_DIR}/venv/bin/flask check-config
-  sudo -u ${APP_USER} ${INSTALL_DIR}/venv/bin/flask create-admin
+  sudo ./install.sh            # management menu (restart, update, edit env, …)
 
-Open the URL in your browser; it will guide you through the first-admin setup.
+First steps:
+  1. Open the URL in your browser — it will guide you through first-admin setup.
+  2. Optionally set OPENROUTESERVICE_API_KEY in ${ENV_FILE} (option 16 in the menu)
+     for isochrone (reachability zone) overlays on the map.
+  3. Listings are refreshed daily automatically. Force a refresh:
+     sudo -u ${APP_USER} ${INSTALL_DIR}/venv/bin/flask refresh-listings
 EOF
+}
+
+# ---------- schedule auto-refresh ----------
+schedule_auto_refresh() {
+    log_step "Scheduling daily listing auto-refresh"
+    if run_flask_cmd "start-auto-refresh --delay-hours 1" 2>/dev/null; then
+        log_ok "Auto-refresh scheduled (first run in ~1 h, then daily)."
+    else
+        log_warn "Could not schedule auto-refresh. Run manually: flask start-auto-refresh"
+    fi
+}
+
+# ---------- edit env ----------
+edit_env() {
+    local editor
+    editor="${EDITOR:-}"
+    if [[ -z "$editor" ]]; then
+        for e in nano vim vi; do
+            if command -v "$e" >/dev/null 2>&1; then editor="$e"; break; fi
+        done
+    fi
+    if [[ -z "$editor" ]]; then
+        log_error "No editor found. Set \$EDITOR or install nano: apt-get install -y nano"
+        return 1
+    fi
+    log_info "Opening $ENV_FILE in $editor …"
+    "$editor" "$ENV_FILE"
+    echo ""
+    if confirm "Restart services to apply changes?" "Y"; then
+        systemctl restart "$WEB_SERVICE" "$WORKER_SERVICE"
+        log_ok "Services restarted."
+    fi
 }
 
 # ---------- new install ----------
@@ -438,6 +499,7 @@ new_install() {
     install_ollama
     setup_systemd
     start_services
+    schedule_auto_refresh
     setup_nginx
     setup_https
     print_summary
@@ -480,10 +542,8 @@ update_app() {
     setup_python
     run_migrations
     # Backfill owner_id for apartments and targets created before the teams feature.
-    sudo -u "$APP_USER" bash -c "cd '$INSTALL_DIR' && \
-        FLASK_APP=wsgi:app set -a && . '$ENV_FILE' && set +a && \
-        '$INSTALL_DIR/venv/bin/flask' backfill-owner-id 2>/dev/null || true && \
-        '$INSTALL_DIR/venv/bin/flask' backfill-targets 2>/dev/null || true"
+    run_flask_cmd "backfill-owner-id" 2>/dev/null || true
+    run_flask_cmd "backfill-targets"  2>/dev/null || true
     if command -v ollama >/dev/null 2>&1; then
         ensure_ollama_model
     else
@@ -495,6 +555,7 @@ update_app() {
     setup_systemd
     setup_nginx
     start_services
+    schedule_auto_refresh
     log_ok "Update complete."
 }
 
@@ -543,10 +604,8 @@ repair_install() {
             setup_postgres
             setup_redis
             run_migrations
-            sudo -u "$APP_USER" bash -c "cd '$INSTALL_DIR' && \
-                FLASK_APP=wsgi:app set -a && . '$ENV_FILE' && set +a && \
-                '$INSTALL_DIR/venv/bin/flask' backfill-owner-id 2>/dev/null || true && \
-                '$INSTALL_DIR/venv/bin/flask' backfill-targets 2>/dev/null || true"
+            run_flask_cmd "backfill-owner-id" 2>/dev/null || true
+            run_flask_cmd "backfill-targets"  2>/dev/null || true
             ensure_ollama_model
             setup_systemd
             start_services
@@ -695,11 +754,12 @@ What would you like to do?
  13) Configure HTTPS (Let's Encrypt)
  14) Migrate database to UTF-8 encoding
  15) Install / configure Ollama (AI field extraction)
- 16) Exit
+ 16) Edit environment file
+ 17) Exit
 
 EOF
     local choice
-    read -rp "Choice [1-16]: " choice || true
+    read -rp "Choice [1-17]: " choice || true
     case "$choice" in
         1)
             update_self
@@ -728,7 +788,8 @@ EOF
             ;;
        14) fix_db_encoding ;;
        15) install_ollama ;;
-       16|q|Q|"") log_info "Bye."; exit 0 ;;
+       16) edit_env ;;
+       17|q|Q|"") log_info "Bye."; exit 0 ;;
         *) log_warn "Invalid choice." ;;
     esac
 }

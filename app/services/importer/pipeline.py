@@ -172,6 +172,7 @@ def _download_images(apt_id: int, urls: list[str]) -> int:
             height=h,
             file_size=meta.get("file_size"),
             perceptual_hash=phash,
+            is_floor_plan=meta.get("is_floor_plan", False),
         ))
         saved += 1
     return saved
@@ -315,6 +316,31 @@ def run_import_job(job_id: int) -> None:
         )
 
         resp = safe_get(url, timeout=timeout, max_size_bytes=max_size, user_agent=import_ua)
+
+        # 404/410 during a refresh → mark apartment offline (not a job failure)
+        if resp.status_code in (404, 410) and job.apartment_id:
+            apt = db.session.get(Apartment, job.apartment_id)
+            src = (db.session.get(ListingSource, job.listing_source_id)
+                   if job.listing_source_id else None)
+            if apt and not apt.is_offline:
+                apt.is_offline = True
+                db.session.add(ApartmentChange(
+                    apartment_id=apt.id,
+                    field_name="is_offline",
+                    old_value="False",
+                    new_value="True",
+                    detected_by="auto_refresh",
+                ))
+                logger.info("Apartment %s marked offline (HTTP %s)", apt.id, resp.status_code)
+            if src:
+                src.last_http_status = resp.status_code
+                src.date_last_refreshed = datetime.utcnow()
+            job.status = ImportJobStatus.DONE
+            job.error_message = f"Listing offline (HTTP {resp.status_code})"
+            job.finished_at = datetime.utcnow()
+            db.session.commit()
+            return
+
         if resp.status_code != 200:
             raise RuntimeError(f"Source returned HTTP {resp.status_code}")
         html = resp.text

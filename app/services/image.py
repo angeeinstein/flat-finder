@@ -24,6 +24,27 @@ except ImportError:  # pragma: no cover
 
 logger = logging.getLogger(__name__)
 
+_FLOOR_PLAN_KEYWORDS = frozenset([
+    "grundriss", "grundriß", "floorplan", "floor_plan", "floor-plan",
+    "grundrisse", "etageplan", "etagenplan", "raumplan", "wohnungsplan",
+])
+
+
+def _url_suggests_floor_plan(url: str) -> bool:
+    low = url.lower()
+    return any(kw in low for kw in _FLOOR_PLAN_KEYWORDS)
+
+
+def _pixel_white_ratio(img) -> float:
+    """Fraction of pixels that are near-white (brightness > 230 in all channels)."""
+    try:
+        rgb = img.convert("RGB")
+        data = rgb.getdata()
+        white = sum(1 for r, g, b in data if r > 230 and g > 230 and b > 230)
+        return white / max(len(data), 1)
+    except Exception:
+        return 0.0
+
 
 def _image_dir(apt_id: int) -> Path:
     base = Path(current_app.config["IMAGE_DIR"]) / str(apt_id)
@@ -44,6 +65,7 @@ def save_image(apt_id: int, url: str, content: bytes) -> dict:
     phash = None
 
     is_grayscale = False
+    white_ratio = 0.0
     if HAS_PIL:
         try:
             img = Image.open(io.BytesIO(content))
@@ -62,6 +84,7 @@ def save_image(apt_id: int, url: str, content: bytes) -> dict:
                     )
                 except Exception:
                     pass
+            white_ratio = _pixel_white_ratio(img)
             if HAS_IMAGEHASH:
                 try:
                     phash = str(imagehash.phash(img.convert("RGB")))
@@ -69,6 +92,9 @@ def save_image(apt_id: int, url: str, content: bytes) -> dict:
                     phash = None
         except Exception as e:
             logger.warning("Image decode failed: %s", e)
+
+    # Floor plan detection: URL keyword OR (mostly white + grayscale-ish)
+    is_floor_plan = _url_suggests_floor_plan(url) or (white_ratio > 0.45 and is_grayscale)
 
     filename = url_filename(url, ext=ext)
     path = out_dir / filename
@@ -98,6 +124,7 @@ def save_image(apt_id: int, url: str, content: bytes) -> dict:
         "file_size": len(content),
         "perceptual_hash": phash,
         "is_grayscale": is_grayscale,
+        "is_floor_plan": is_floor_plan,
     }
 
 

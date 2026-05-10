@@ -38,6 +38,8 @@
       {% if apt.computed_total_monthly_cost %}€{{ '%.0f'|format(apt.computed_total_monthly_cost) }}{% else %}—{% endif %}
       <span class="small">/ month</span>
     </div>
+    <canvas id="price-sparkline" width="120" height="32"
+            title="Price history" style="display:none; opacity:.65"></canvas>
     <div class="d-flex gap-1 flex-wrap justify-content-end">
       <a href="{{ url_for('apartments.edit', apt_id=apt.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i> Edit</a>
       <form action="{{ url_for('apartments.refresh', apt_id=apt.id) }}" method="post" class="d-inline">
@@ -506,6 +508,41 @@ document.querySelectorAll('.remove-tag').forEach(a => {
     } catch (err) { flatFinder.showToast(err.message, 'danger'); }
   });
 });
+</script>
+<script>
+// Price sparkline — tiny, no axes, just trend direction
+(function () {
+  const canvas = document.getElementById('price-sparkline');
+  if (!canvas) return;
+  fetch('/api/apartments/{{ apt.id }}/price-history')
+    .then(r => r.json())
+    .then(data => {
+      const pts = data.points;
+      if (!pts || pts.length < 2) return;
+      canvas.style.display = 'block';
+      const ctx = canvas.getContext('2d');
+      const prices = pts.map(p => p.price);
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      const W = canvas.width, H = canvas.height, pad = 3;
+      const range = max - min || 1;
+      const xs = pts.map((_, i) => pad + (i / (pts.length - 1)) * (W - pad * 2));
+      const ys = pts.map(p => H - pad - ((p.price - min) / range) * (H - pad * 2));
+      const rising = prices[prices.length - 1] > prices[0];
+      const color = rising ? '#dc3545' : '#198754';  // red=up(bad), green=down(good)
+      ctx.beginPath();
+      ctx.moveTo(xs[0], ys[0]);
+      for (let i = 1; i < xs.length; i++) ctx.lineTo(xs[i], ys[i]);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      // Dot at latest point
+      ctx.beginPath();
+      ctx.arc(xs[xs.length - 1], ys[ys.length - 1], 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }).catch(() => {});
+})();
 </script>
 <script>
 (function () {

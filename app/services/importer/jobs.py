@@ -226,3 +226,57 @@ def ollama_pull_task(model_name: str) -> None:
     if result.returncode != 0:
         raise RuntimeError(f"ollama pull {model_name} failed: {result.stderr[:500]}")
     logger.info("Successfully pulled Ollama model: %s", model_name)
+
+
+# ── Auto-refresh scheduling ───────────────────────────────────────────────────
+
+AUTO_REFRESH_JOB_ID = "auto-refresh-daily"
+
+
+def _schedule_next_auto_refresh(delay_hours: int = 24) -> None:
+    """Enqueue the auto-refresh task to run delay_hours from now."""
+    from datetime import timedelta
+    try:
+        q = _get_queue()
+        q.enqueue_in(
+            timedelta(hours=delay_hours),
+            "app.services.importer.jobs.auto_refresh_all_task",
+            job_id=AUTO_REFRESH_JOB_ID,
+            job_timeout=3600,
+            result_ttl=3600,
+            failure_ttl=86400,
+        )
+        logger.info("Next auto-refresh scheduled in %dh", delay_hours)
+    except Exception as e:
+        logger.warning("Could not schedule auto-refresh: %s", e)
+
+
+def auto_refresh_all_task() -> None:
+    """Daily worker task: enqueue a refresh for every active listing source,
+    then re-schedule itself for the next day."""
+    from app.models.listing import ListingSource
+    sources = ListingSource.query.filter_by(is_active=True).all()
+    count = 0
+    for src in sources:
+        try:
+            enqueue_refresh(src.id)
+            count += 1
+        except Exception as e:
+            logger.warning("Could not enqueue refresh for source %s: %s", src.id, e)
+    logger.info("Auto-refresh: enqueued %d refresh job(s)", count)
+    _schedule_next_auto_refresh(delay_hours=24)
+
+
+def get_auto_refresh_status() -> dict:
+    """Return info about the scheduled auto-refresh job (for admin display)."""
+    try:
+        redis = Redis.from_url(current_app.config["REDIS_URL"])
+        from rq.job import Job as _Job
+        job = _Job.fetch(AUTO_REFRESH_JOB_ID, connection=redis)
+        return {
+            "scheduled": True,
+            "status": str(job.get_status()),
+            "enqueued_at": job.enqueued_at.isoformat() if job.enqueued_at else None,
+        }
+    except Exception:
+        return {"scheduled": False}

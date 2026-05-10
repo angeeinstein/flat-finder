@@ -122,6 +122,27 @@ def register_cli(app: Flask) -> None:
             count += 1
         click.echo(f"Enqueued {count} refresh jobs.")
 
+    @app.cli.command("start-auto-refresh")
+    @click.option("--delay-hours", default=1, show_default=True,
+                  help="Hours until the first auto-refresh run.")
+    @with_appcontext
+    def start_auto_refresh(delay_hours: int):
+        """Schedule daily auto-refresh of all active listing sources.
+
+        Run once after installation. The job reschedules itself every 24 h.
+        """
+        from redis import Redis
+        from app.services.importer.jobs import (
+            AUTO_REFRESH_JOB_ID, _schedule_next_auto_refresh, get_auto_refresh_status,
+        )
+        status = get_auto_refresh_status()
+        if status["scheduled"]:
+            click.echo(f"Auto-refresh already scheduled (status: {status['status']}).")
+            if not click.confirm("Reschedule anyway?", default=False):
+                return
+        _schedule_next_auto_refresh(delay_hours=delay_hours)
+        click.echo(f"Daily auto-refresh scheduled. First run in ~{delay_hours}h.")
+
     @app.cli.command("recalc-travel-times")
     @with_appcontext
     def recalc_travel_times():

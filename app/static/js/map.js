@@ -200,6 +200,66 @@
     });
   }
 
+  // ---- Isochrone ----
+  let isoLayer = null;
+
+  const isoWrap    = document.getElementById('isochrone-wrap');
+  const isoSlider  = document.getElementById('iso-minutes');
+  const isoOutput  = document.getElementById('iso-output');
+  const isoShow    = document.getElementById('iso-show');
+  const isoClear   = document.getElementById('iso-clear');
+  const isoStatus  = document.getElementById('iso-status');
+
+  isoSlider.addEventListener('input', () => {
+    isoOutput.textContent = isoSlider.value + ' min';
+  });
+
+  function clearIsochrone() {
+    if (isoLayer) { map.removeLayer(isoLayer); isoLayer = null; }
+    isoStatus.style.display = 'none';
+  }
+
+  isoClear.addEventListener('click', clearIsochrone);
+
+  isoShow.addEventListener('click', async () => {
+    const targetId = document.getElementById('target').value;
+    const mode     = document.getElementById('mode').value;
+    const target   = allTargets.find(t => String(t.id) === String(targetId));
+    if (!target || target.lat == null) {
+      isoStatus.textContent = 'Select a target first.';
+      isoStatus.style.display = '';
+      return;
+    }
+    const minutes = parseInt(isoSlider.value, 10);
+    isoShow.disabled = true;
+    isoShow.textContent = '…';
+    isoStatus.textContent = 'Fetching isochrone…';
+    isoStatus.style.display = '';
+    try {
+      const csrf = document.querySelector('meta[name="csrf-token"]').content;
+      const resp = await fetch('/api/isochrone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        body: JSON.stringify({ lat: target.lat, lng: target.lng, minutes, mode }),
+      });
+      const data = await resp.json();
+      if (data.error) { isoStatus.textContent = data.error; return; }
+      clearIsochrone();
+      isoLayer = L.geoJSON(data, {
+        style: {
+          color: '#0d6efd', weight: 2, opacity: .7,
+          fillColor: '#0d6efd', fillOpacity: .08,
+        },
+      }).addTo(map);
+      isoStatus.textContent = `${minutes} min reachable zone`;
+    } catch (e) {
+      isoStatus.textContent = 'Request failed.';
+    } finally {
+      isoShow.disabled = false;
+      isoShow.textContent = 'Show';
+    }
+  });
+
   // ---- Load from API (fired when target/mode changes) ----
   async function load() {
     const targetId = document.getElementById('target').value;
@@ -217,14 +277,17 @@
     allApartments = data.apartments;
     allTargets    = data.targets;
 
-    // Show/hide travel-time slider depending on whether a target is selected
+    // Show/hide travel-time slider and isochrone depending on whether a target is selected
     const travelWrap = document.getElementById('travel-wrap');
     if (targetId) {
       travelWrap.style.display = '';
+      if (isoWrap) isoWrap.style.display = '';
     } else {
       travelWrap.style.display = 'none';
       document.getElementById('f-max-travel').value = 0;
       document.getElementById('travel-output').textContent = 'any';
+      if (isoWrap) isoWrap.style.display = 'none';
+      clearIsochrone();
     }
 
     renderTargets();

@@ -1,21 +1,176 @@
 {% extends "base.html" %}
 {% block title %}Gallery · {{ apt.title or 'Apartment #' ~ apt.id }}{% endblock %}
 
+{% block head_extra %}
+<style>
+.gallery-thumb { width:100%; height:160px; object-fit:cover; border-radius:6px; cursor:pointer;
+                 transition:opacity .15s; }
+.gallery-thumb:hover { opacity:.85; }
+.fp-thumb { width:100%; max-height:260px; object-fit:contain; border-radius:6px; cursor:pointer;
+            background:var(--bs-body-bg); border:1px solid var(--bs-border-color); padding:8px;
+            transition:opacity .15s; }
+.fp-thumb:hover { opacity:.85; }
+.gallery-thumb.selected, .fp-thumb.selected { outline:3px solid var(--bs-primary); }
+
+/* Side-by-side panel */
+#sidebyside { display:none; }
+#sidebyside.active { display:flex; }
+#sidebyside img { max-height:70vh; max-width:100%; object-fit:contain; }
+
+/* Lightbox overlay */
+#lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,.88);
+            z-index:9999; align-items:center; justify-content:center; }
+#lightbox.open { display:flex; }
+#lightbox img { max-height:90vh; max-width:92vw; object-fit:contain; border-radius:4px; }
+#lightbox-close { position:absolute; top:16px; right:20px; color:#fff; font-size:2rem;
+                  background:none; border:none; cursor:pointer; line-height:1; }
+</style>
+{% endblock %}
+
 {% block content %}
-<a href="{{ url_for('apartments.detail', apt_id=apt.id) }}" class="btn btn-sm btn-outline-secondary mb-3">← back</a>
-<h1 class="h4 mb-3">Photos · {{ apt.title or 'Apartment #' ~ apt.id }}</h1>
-<div class="row g-2">
-  {% for img in apt.images %}
-    <div class="col-6 col-md-4 col-lg-3">
-      <a href="{{ url_for('api.image_full', image_id=img.id) }}"
-         class="gallery-cell d-block"
-         data-lightbox-group="gallery-{{ apt.id }}"
-         data-lightbox-full="{{ url_for('api.image_full', image_id=img.id) }}">
-        <img class="gallery-thumb" src="{{ url_for('api.image_thumbnail', image_id=img.id) }}" alt="" loading="lazy">
-      </a>
-    </div>
-  {% else %}
-    <div class="col"><em class="text-muted">No images.</em></div>
+<div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+  <a href="{{ url_for('apartments.detail', apt_id=apt.id) }}" class="btn btn-sm btn-outline-secondary">← Back</a>
+  <h1 class="h4 mb-0">Gallery · {{ apt.title or 'Apartment #' ~ apt.id }}</h1>
+</div>
+
+{% set floor_plans = apt.images | selectattr('is_floor_plan') | list %}
+{% set photos      = apt.images | rejectattr('is_floor_plan') | list %}
+
+{% if not apt.images %}
+  <em class="text-muted">No images.</em>
+{% else %}
+
+{# ── Side-by-side panel (shown when a floor plan is pinned) ────────────── #}
+<div id="sidebyside" class="gap-3 mb-4 align-items-start">
+  <div class="flex-grow-1 text-center border rounded p-2" style="min-width:0">
+    <div class="text-muted small mb-1">Floor plan</div>
+    <img id="sbs-fp" src="" alt="Floor plan">
+  </div>
+  <div class="flex-grow-1 text-center border rounded p-2" style="min-width:0">
+    <div class="text-muted small mb-1">Photo</div>
+    <img id="sbs-photo" src="" alt="Photo">
+  </div>
+  <button class="btn btn-sm btn-outline-secondary align-self-start flex-shrink-0"
+          id="sbs-close">✕ Close</button>
+</div>
+
+{# ── Photos ─────────────────────────────────────────────────────────────── #}
+{% if photos %}
+<h2 class="h6 text-muted text-uppercase mb-2">Photos <span class="badge bg-secondary fw-normal">{{ photos|length }}</span></h2>
+<div class="row g-2 mb-4">
+  {% for img in photos %}
+  <div class="col-6 col-md-4 col-lg-3">
+    <img class="gallery-thumb photo-img" loading="lazy"
+         src="{{ url_for('api.image_thumbnail', image_id=img.id) }}"
+         data-full="{{ url_for('api.image_full', image_id=img.id) }}"
+         alt="">
+  </div>
   {% endfor %}
 </div>
+{% endif %}
+
+{# ── Floor plans ─────────────────────────────────────────────────────────── #}
+{% if floor_plans %}
+<h2 class="h6 text-muted text-uppercase mb-2">
+  Floor plans <span class="badge bg-secondary fw-normal">{{ floor_plans|length }}</span>
+  {% if photos %}<span class="text-muted small fw-normal ms-2">Click to compare side-by-side with a photo</span>{% endif %}
+</h2>
+<div class="row g-3">
+  {% for img in floor_plans %}
+  <div class="col-12 col-md-6 col-lg-4">
+    <img class="fp-thumb fp-img" loading="lazy"
+         src="{{ url_for('api.image_thumbnail', image_id=img.id) }}"
+         data-full="{{ url_for('api.image_full', image_id=img.id) }}"
+         alt="Floor plan">
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endif %}
+
+{# ── Lightbox ────────────────────────────────────────────────────────────── #}
+<div id="lightbox">
+  <button id="lightbox-close" title="Close">✕</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const lightbox    = document.getElementById('lightbox');
+  const lbImg       = document.getElementById('lightbox-img');
+  const lbClose     = document.getElementById('lightbox-close');
+  const sbsPanel    = document.getElementById('sidebyside');
+  const sbsFp       = document.getElementById('sbs-fp');
+  const sbsPhoto    = document.getElementById('sbs-photo');
+  const sbsClose    = document.getElementById('sbs-close');
+
+  let activeFp    = null;  // currently pinned floor plan full URL
+  let activePhoto = null;  // currently selected photo full URL
+
+  // ---- Lightbox ----
+  function openLightbox(src) {
+    lbImg.src = src;
+    lightbox.classList.add('open');
+  }
+  lbClose.addEventListener('click', () => lightbox.classList.remove('open'));
+  lightbox.addEventListener('click', e => { if (e.target === lightbox) lightbox.classList.remove('open'); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') lightbox.classList.remove('open'); });
+
+  // ---- Side-by-side ----
+  function updateSbs() {
+    if (activeFp && activePhoto) {
+      sbsFp.src    = activeFp;
+      sbsPhoto.src = activePhoto;
+      sbsPanel.classList.add('active');
+    }
+  }
+
+  sbsClose.addEventListener('click', () => {
+    activeFp = activePhoto = null;
+    sbsPanel.classList.remove('active');
+    document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+  });
+
+  // ---- Photo clicks ----
+  document.querySelectorAll('.photo-img').forEach(img => {
+    img.addEventListener('click', () => {
+      if (activeFp) {
+        // Pin as the comparison photo
+        document.querySelectorAll('.photo-img.selected').forEach(el => el.classList.remove('selected'));
+        img.classList.add('selected');
+        activePhoto = img.dataset.full;
+        updateSbs();
+      } else {
+        openLightbox(img.dataset.full);
+      }
+    });
+  });
+
+  // ---- Floor plan clicks ----
+  document.querySelectorAll('.fp-img').forEach(img => {
+    img.addEventListener('click', () => {
+      const hasPhotos = document.querySelectorAll('.photo-img').length > 0;
+      if (hasPhotos) {
+        // Pin floor plan for side-by-side; auto-pick first photo if none selected
+        document.querySelectorAll('.fp-img.selected').forEach(el => el.classList.remove('selected'));
+        img.classList.add('selected');
+        activeFp = img.dataset.full;
+        if (!activePhoto) {
+          const firstPhoto = document.querySelector('.photo-img');
+          if (firstPhoto) {
+            firstPhoto.classList.add('selected');
+            activePhoto = firstPhoto.dataset.full;
+          }
+        }
+        updateSbs();
+      } else {
+        openLightbox(img.dataset.full);
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}

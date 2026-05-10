@@ -382,6 +382,76 @@ def geocode_one():
     return jsonify({"found": True, "lat": lat, "lng": lng})
 
 
+@bp.route("/apartments/<int:apt_id>/price-history")
+def price_history(apt_id: int):
+    """Return a price-change timeline for charting."""
+    from app.models.listing import ApartmentChange
+    apt = db.session.get(Apartment, apt_id)
+    if not apt:
+        abort(404)
+    g.ctx.check_apartment(apt)
+
+    changes = (
+        ApartmentChange.query
+        .filter_by(apartment_id=apt_id)
+        .filter(ApartmentChange.field_name == "price")
+        .order_by(ApartmentChange.changed_at)
+        .all()
+    )
+
+    points = []
+    # Seed first point from the oldest change's old_value (= original import price)
+    if changes and changes[0].old_value:
+        try:
+            points.append({
+                "date": apt.created_at.isoformat() if apt.created_at else changes[0].changed_at.isoformat(),
+                "price": float(changes[0].old_value),
+            })
+        except (ValueError, TypeError):
+            pass
+    for c in changes:
+        if c.new_value:
+            try:
+                points.append({"date": c.changed_at.isoformat(), "price": float(c.new_value)})
+            except (ValueError, TypeError):
+                pass
+    return jsonify({"points": points})
+
+
+@bp.route("/isochrone", methods=["POST"])
+def isochrone():
+    """Proxy an isochrone request to OpenRouteService (keeps API key server-side)."""
+    import requests as _req
+    data = request.get_json(silent=True) or {}
+    lat = data.get("lat")
+    lng = data.get("lng")
+    minutes = max(5, min(int(data.get("minutes", 30)), 120))
+    mode = data.get("mode", "walking")
+
+    api_key = current_app.config.get("OPENROUTESERVICE_API_KEY", "")
+    if not api_key:
+        return jsonify({"error": "Set OPENROUTESERVICE_API_KEY in your .env to use isochrones."}), 503
+
+    profile_map = {
+        "walking": "foot-walking",
+        "bicycle": "cycling-regular",
+        "car":     "driving-car",
+        "transit": "foot-walking",
+    }
+    profile = profile_map.get(mode, "foot-walking")
+    try:
+        resp = _req.post(
+            f"https://api.openrouteservice.org/v2/isochrones/{profile}",
+            headers={"Authorization": api_key, "Content-Type": "application/json"},
+            json={"locations": [[lng, lat]], "range": [minutes * 60], "range_type": "time"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        return jsonify(resp.json())
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 502
+
+
 @bp.route("/rq-status/<path:job_id>")
 def rq_job_status(job_id: str):
     """Return status of any RQ job by its job_id string."""
