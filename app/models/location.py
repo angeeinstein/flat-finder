@@ -23,13 +23,19 @@ class TargetAddress(db.Model):
     lat = db.Column(db.Float, nullable=True)
     lng = db.Column(db.Float, nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
-    is_personal = db.Column(db.Boolean, nullable=False, default=False)
-    user_id = db.Column(
+    # owner_id=NULL + team_id=NULL → global (admin-created, visible to all)
+    # owner_id=X + team_id=NULL  → personal target of user X
+    # team_id=Y                  → team target for team Y
+    owner_id = db.Column(
         db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    team_id = db.Column(
+        db.Integer, db.ForeignKey("teams.id", ondelete="CASCADE"), nullable=True, index=True
     )
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
-    user = db.relationship("User")
+    owner = db.relationship("User")
+    team = db.relationship("Team")
 
 
 class TravelTime(db.Model):

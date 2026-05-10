@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_macros.html" import render_field %}
+{% block title %}{{ 'Edit Category' if category else 'New Category' }} – {{ app_name }}{% endblock %}
+{% block content %}
+<a href="{{ url_for('settings.categories') }}" class="btn btn-sm btn-outline-secondary mb-3">← Back</a>
+<h2 class="mb-3">{{ 'Edit ' + category.name if category else 'New rating category' }}</h2>
+<form method="post" novalidate class="card shadow-sm">
+  <div class="card-body">
+    {{ form.hidden_tag() }}
+    <div class="row g-3">
+      <div class="col-md-6">{{ render_field(form.name) }}</div>
+      <div class="col-md-6">{{ render_field(form.description) }}</div>
+      <div class="col-md-3">{{ render_field(form.weight) }}</div>
+      <div class="col-md-3">{{ render_field(form.min_score) }}</div>
+      <div class="col-md-3">{{ render_field(form.max_score) }}</div>
+      <div class="col-md-3">{{ render_field(form.display_order) }}</div>
+      <div class="col-md-3">{{ render_field(form.is_active) }}</div>
+    </div>
+    <div class="mt-3 d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Save</button>
+      <a href="{{ url_for('settings.categories') }}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

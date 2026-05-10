@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 
 from flask import current_app
 from redis import Redis
@@ -54,3 +55,29 @@ def refresh_source_task(source_id: int) -> None:
     from app.services.importer.pipeline import run_refresh_for_source
 
     run_refresh_for_source(source_id)
+
+
+def schedule_job_cleanup(import_job_id: int, delay_seconds: int = 300) -> None:
+    """Schedule deletion of a done ImportJob after a grace period."""
+    try:
+        q = _get_queue()
+        q.enqueue_in(
+            timedelta(seconds=delay_seconds),
+            "app.services.importer.jobs.delete_import_job_task",
+            import_job_id,
+            job_timeout=60,
+            result_ttl=0,
+        )
+    except Exception as e:
+        logger.warning("Could not schedule job cleanup for %s: %s", import_job_id, e)
+
+
+def delete_import_job_task(import_job_id: int) -> None:
+    """Delete an ImportJob row (called by RQ scheduler after grace period)."""
+    from app.extensions import db
+    from app.models.job import ImportJob, ImportJobStatus
+
+    job = db.session.get(ImportJob, import_job_id)
+    if job and job.status == ImportJobStatus.DONE:
+        db.session.delete(job)
+        db.session.commit()

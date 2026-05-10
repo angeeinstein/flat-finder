@@ -42,8 +42,12 @@ def index():
         "apartments": Apartment.query.count(),
         "open_duplicates": DuplicateCandidate.query.filter_by(status=DuplicateStatus.PENDING).count(),
         "failed_jobs": ImportJob.query.filter_by(status=ImportJobStatus.FAILED).count(),
-        "active_targets": TargetAddress.query.filter_by(is_active=True).count(),
-        "active_categories": RatingCategory.query.filter_by(is_active=True).count(),
+        "active_targets": TargetAddress.query.filter(
+            TargetAddress.owner_id.is_(None), TargetAddress.team_id.is_(None), TargetAddress.is_active.is_(True)
+        ).count(),
+        "active_categories": RatingCategory.query.filter(
+            RatingCategory.owner_id.is_(None), RatingCategory.team_id.is_(None), RatingCategory.is_active.is_(True)
+        ).count(),
     }
     return render_template("admin/index.html", stats=stats)
 
@@ -124,11 +128,14 @@ def user_edit(user_id: int):
     return render_template("admin/user_edit.html", form=form, user=u)
 
 
-# -------------------- rating categories --------------------
+# -------------------- global rating category defaults (admin-only) --------------------
 
 @bp.route("/rating-categories")
 def rating_categories():
-    cats = RatingCategory.query.order_by(RatingCategory.display_order, RatingCategory.id).all()
+    """Manage global default categories (owner_id=NULL, team_id=NULL)."""
+    cats = RatingCategory.query.filter(
+        RatingCategory.owner_id.is_(None), RatingCategory.team_id.is_(None)
+    ).order_by(RatingCategory.display_order, RatingCategory.id).all()
     return render_template("admin/categories.html", categories=cats)
 
 
@@ -144,11 +151,12 @@ def rating_category_new():
             max_score=form.max_score.data,
             display_order=form.display_order.data,
             is_active=form.is_active.data,
+            owner_id=None, team_id=None,
         )
         db.session.add(cat)
         db.session.commit()
         log_action("rating_category_created", target_type="RatingCategory", target_id=cat.id)
-        flash("Category created.", "success")
+        flash("Global category created.", "success")
         return redirect(url_for("admin.rating_categories"))
     return render_template("admin/category_edit.html", form=form, category=None)
 
@@ -174,11 +182,28 @@ def rating_category_edit(cat_id: int):
     return render_template("admin/category_edit.html", form=form, category=cat)
 
 
-# -------------------- target addresses --------------------
+@bp.route("/rating-categories/<int:cat_id>/delete", methods=["POST"])
+def rating_category_delete(cat_id: int):
+    cat = db.session.get(RatingCategory, cat_id)
+    if not cat:
+        abort(404)
+    name = cat.name
+    db.session.delete(cat)
+    db.session.commit()
+    log_action("rating_category_deleted", target_type="RatingCategory", target_id=cat_id,
+               details={"name": name})
+    flash(f'Category "{name}" deleted.', "success")
+    return redirect(url_for("admin.rating_categories"))
+
+
+# -------------------- global target address defaults (admin-only) --------------------
 
 @bp.route("/target-addresses")
 def target_addresses():
-    targets = TargetAddress.query.order_by(TargetAddress.name).all()
+    """Manage global default target addresses (owner_id=NULL, team_id=NULL)."""
+    targets = TargetAddress.query.filter(
+        TargetAddress.owner_id.is_(None), TargetAddress.team_id.is_(None)
+    ).order_by(TargetAddress.name).all()
     return render_template("admin/targets.html", targets=targets)
 
 
@@ -192,25 +217,19 @@ def target_address_new():
             lat=form.lat.data,
             lng=form.lng.data,
             is_active=form.is_active.data,
-            is_personal=False,
+            owner_id=None, team_id=None,
         )
-        # Geocode if no coords given
         if t.lat is None or t.lng is None:
             from app.services.geocoding import geocode
-
             coords = geocode(t.address)
             if coords:
                 t.lat, t.lng = coords
             else:
-                flash(
-                    "Could not geocode this address. Save anyway, then enter "
-                    "coordinates manually or use the autocomplete suggestions.",
-                    "warning",
-                )
+                flash("Could not geocode this address.", "warning")
         db.session.add(t)
         db.session.commit()
         log_action("target_address_created", target_type="TargetAddress", target_id=t.id)
-        flash("Target address created.", "success")
+        flash("Global target address created.", "success")
         return redirect(url_for("admin.target_addresses"))
     return render_template("admin/target_edit.html", form=form, target=None)
 
@@ -229,10 +248,8 @@ def target_address_edit(tid: int):
         t.lat = form.lat.data
         t.lng = form.lng.data
         t.is_active = form.is_active.data
-        # Re-geocode whenever the address text changes or coords are missing.
         if (t.lat is None or t.lng is None) or addr_changed:
             from app.services.geocoding import geocode
-
             coords = geocode(t.address)
             if coords:
                 t.lat, t.lng = coords

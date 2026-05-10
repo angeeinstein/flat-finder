@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from flask import abort, session
 from flask_login import current_user
+from sqlalchemy import and_, or_
 
 from app.extensions import db
 from app.models.apartment import Apartment
@@ -99,6 +100,72 @@ class AppContext:
         if not ok and not current_user.is_admin:
             abort(403)
 
+    def check_target(self, target) -> None:
+        """Abort 403 if target is not owned by this context (global targets are read-only)."""
+        if self.team_id is None:
+            ok = target.owner_id == self.user_id and target.team_id is None
+        else:
+            ok = target.team_id == self.team_id
+        if not ok:
+            abort(403)
+
+    def check_category(self, cat) -> None:
+        """Abort 403 if category is not owned by this context."""
+        if self.team_id is None:
+            ok = cat.owner_id == self.user_id and cat.team_id is None
+        else:
+            ok = cat.team_id == self.team_id
+        if not ok:
+            abort(403)
+
+    # ------------------------------------------------------------------ scoped queries
+
+    def target_query(self):
+        """Returns active targets visible in this context: global + context-specific."""
+        from app.models.location import TargetAddress
+        global_filter = and_(TargetAddress.owner_id.is_(None), TargetAddress.team_id.is_(None))
+        if self.team_id is None:
+            ctx_filter = and_(TargetAddress.owner_id == self.user_id, TargetAddress.team_id.is_(None))
+        else:
+            ctx_filter = TargetAddress.team_id == self.team_id
+        return TargetAddress.query.filter(
+            TargetAddress.is_active.is_(True),
+            or_(global_filter, ctx_filter),
+        )
+
+    def owned_target_query(self):
+        """Returns only targets that belong to this context (excludes globals)."""
+        from app.models.location import TargetAddress
+        if self.team_id is None:
+            return TargetAddress.query.filter(
+                TargetAddress.owner_id == self.user_id,
+                TargetAddress.team_id.is_(None),
+            )
+        return TargetAddress.query.filter(TargetAddress.team_id == self.team_id)
+
+    def category_query(self):
+        """Returns active categories visible in this context: global + context-specific."""
+        from app.models.rating import RatingCategory
+        global_filter = and_(RatingCategory.owner_id.is_(None), RatingCategory.team_id.is_(None))
+        if self.team_id is None:
+            ctx_filter = and_(RatingCategory.owner_id == self.user_id, RatingCategory.team_id.is_(None))
+        else:
+            ctx_filter = RatingCategory.team_id == self.team_id
+        return RatingCategory.query.filter(
+            RatingCategory.is_active.is_(True),
+            or_(global_filter, ctx_filter),
+        ).order_by(RatingCategory.display_order, RatingCategory.id)
+
+    def owned_category_query(self):
+        """Returns only categories owned by this context (excludes globals)."""
+        from app.models.rating import RatingCategory
+        if self.team_id is None:
+            return RatingCategory.query.filter(
+                RatingCategory.owner_id == self.user_id,
+                RatingCategory.team_id.is_(None),
+            )
+        return RatingCategory.query.filter(RatingCategory.team_id == self.team_id)
+
     # ------------------------------------------------------------------ new-object defaults
 
     def apartment_defaults(self) -> dict:
@@ -113,5 +180,19 @@ class AppContext:
         """Fields to set on a newly created ImportJob for this context."""
         return {
             "created_by_id": self.user_id,
+            "team_id": self.team_id,
+        }
+
+    def target_defaults(self) -> dict:
+        """Fields to set on a newly created TargetAddress for this context."""
+        return {
+            "owner_id": self.user_id if self.team_id is None else None,
+            "team_id": self.team_id,
+        }
+
+    def category_defaults(self) -> dict:
+        """Fields to set on a newly created RatingCategory for this context."""
+        return {
+            "owner_id": self.user_id if self.team_id is None else None,
             "team_id": self.team_id,
         }

@@ -78,7 +78,7 @@ def dashboard():
         st = UserApartmentStatus.query.filter_by(user_id=current_user.id, apartment_id=a.id).first()
         statuses[a.id] = st.status if st else None
 
-    targets = TargetAddress.query.filter_by(is_active=True).order_by(TargetAddress.name).all()
+    targets = g.ctx.target_query().order_by(TargetAddress.name).all()
     selected_target_id = request.args.get("target_id", type=int)
 
     travel_for: dict[int, dict] = {}
@@ -160,6 +160,7 @@ def import_url():
 
     recent_jobs = (
         g.ctx.import_job_query()
+        .filter(ImportJob.status != ImportJobStatus.DONE)
         .order_by(ImportJob.created_at.desc())
         .limit(20)
         .all()

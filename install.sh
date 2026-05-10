@@ -405,10 +405,11 @@ update_app() {
 
     setup_python
     run_migrations
-    # Backfill owner_id for apartments created before the teams feature was added.
+    # Backfill owner_id for apartments and targets created before the teams feature.
     sudo -u "$APP_USER" bash -c "cd '$INSTALL_DIR' && \
         FLASK_APP=wsgi:app set -a && . '$ENV_FILE' && set +a && \
-        '$INSTALL_DIR/venv/bin/flask' backfill-owner-id 2>/dev/null || true"
+        '$INSTALL_DIR/venv/bin/flask' backfill-owner-id 2>/dev/null || true && \
+        '$INSTALL_DIR/venv/bin/flask' backfill-targets 2>/dev/null || true"
     setup_systemd
     setup_nginx
     start_services

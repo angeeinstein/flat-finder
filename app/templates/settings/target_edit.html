@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_macros.html" import render_field %}
+{% block title %}{{ 'Edit Target' if target else 'New Target' }} – {{ app_name }}{% endblock %}
+{% block content %}
+<a href="{{ url_for('settings.targets') }}" class="btn btn-sm btn-outline-secondary mb-3">← Back</a>
+<h2 class="mb-3">{{ 'Edit ' + target.name if target else 'New travel target' }}</h2>
+<form method="post" novalidate class="card shadow-sm">
+  <div class="card-body">
+    {{ form.hidden_tag() }}
+    <div class="row g-3">
+      <div class="col-md-5">{{ render_field(form.name) }}</div>
+      <div class="col-md-7">
+        <div class="mb-3">
+          {{ form.address.label(class_="form-label") }}
+          {{ form.address(
+              class_="form-control" + (" is-invalid" if form.address.errors else ""),
+              placeholder="Start typing… suggestions will appear",
+              **{"data-address-autocomplete": "true",
+                 "data-lat-target": "#" + form.lat.id,
+                 "data-lng-target": "#" + form.lng.id,
+                 "autocomplete": "off"}
+          ) }}
+          {% for err in form.address.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+        </div>
+      </div>
+      <div class="col-md-3">{{ render_field(form.lat) }}</div>
+      <div class="col-md-3">{{ render_field(form.lng) }}</div>
+      <div class="col-md-3">{{ render_field(form.is_active) }}</div>
+    </div>
+    <small class="text-muted d-block mb-3">
+      <i class="bi bi-info-circle"></i> Pick a suggestion to auto-fill coordinates, or leave blank to geocode on save.
+    </small>
+    <button type="submit" class="btn btn-primary">Save</button>
+  </div>
+</form>
+{% endblock %}

@@ -9,8 +9,8 @@
     ('Apartments', stats.apartments, url_for('main.dashboard')),
     ('Open duplicates', stats.open_duplicates, url_for('admin.duplicates')),
     ('Failed jobs', stats.failed_jobs, url_for('admin.failed_jobs')),
-    ('Active targets', stats.active_targets, url_for('admin.target_addresses')),
-    ('Active categories', stats.active_categories, url_for('admin.rating_categories')),
+    ('Global targets', stats.active_targets, url_for('admin.target_addresses')),
+    ('Global categories', stats.active_categories, url_for('admin.rating_categories')),
   ] %}
     <div class="col-6 col-md-3">
       <a href="{{ link }}" class="kpi-card d-block text-decoration-none text-reset">

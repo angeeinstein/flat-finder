@@ -9,6 +9,12 @@
 {% endblock %}
 
 {% block content %}
+{% if request.args.get('refreshing') %}
+<div class="alert alert-info d-flex align-items-center gap-2" id="refresh-banner">
+  <div class="spinner-border spinner-border-sm" role="status"></div>
+  <span>Refreshing listing data… the page will update automatically.</span>
+</div>
+{% endif %}
 <div class="detail-hero d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
   <div class="flex-grow-1">
     <div class="d-flex flex-wrap gap-2 mb-1">
@@ -392,6 +398,36 @@ document.getElementById('recalc-tt')?.addEventListener('click', async () => {
     setTimeout(() => location.reload(), 600);
   } catch (e) { flatFinder.showToast(e.message, 'danger'); }
 });
+
+// Auto-reload when ?refreshing=1 — poll until job for this apartment is gone
+(function() {
+  if (!new URLSearchParams(location.search).get('refreshing')) return;
+  let attempts = 0;
+  const maxAttempts = 24; // 2 min total
+  function poll() {
+    if (++attempts > maxAttempts) {
+      // Give up; clean URL and stop spinning
+      history.replaceState({}, '', location.pathname);
+      document.getElementById('refresh-banner')?.remove();
+      return;
+    }
+    setTimeout(async () => {
+      try {
+        // Check if any running/pending jobs exist for this apartment
+        const resp = await fetch(`/api/apartments/{{ apt.id }}/refresh-status`);
+        if (!resp.ok) { poll(); return; }
+        const data = await resp.json();
+        if (!data.running) {
+          // Reload without the ?refreshing param
+          location.href = location.pathname;
+        } else {
+          poll();
+        }
+      } catch (e) { poll(); }
+    }, 5000);
+  }
+  poll();
+})();
 
 // Add tag
 document.getElementById('add-tag-form')?.addEventListener('submit', async (e) => {

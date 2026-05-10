@@ -18,6 +18,7 @@ from app.models.listing import (
     ListingSource,
 )
 from app.models.location import TargetAddress
+from sqlalchemy import and_, or_
 from app.services.geocoding import geocode
 from app.services.image import save_image
 from app.services.importer import get_importer_for
@@ -332,9 +333,22 @@ def run_import_job(job_id: int) -> None:
 
         db.session.flush()  # ensure images present for warning rules
 
-        # Travel times
+        # Travel times — only targets visible in this job's context
         if apt.lat is not None and apt.lng is not None:
-            for tgt in TargetAddress.query.filter_by(is_active=True).all():
+            global_filter = and_(TargetAddress.owner_id.is_(None), TargetAddress.team_id.is_(None))
+            if job.team_id is not None:
+                ctx_filter = TargetAddress.team_id == job.team_id
+            elif job.created_by_id is not None:
+                ctx_filter = and_(
+                    TargetAddress.owner_id == job.created_by_id,
+                    TargetAddress.team_id.is_(None),
+                )
+            else:
+                ctx_filter = db.false()
+            for tgt in TargetAddress.query.filter(
+                TargetAddress.is_active.is_(True),
+                or_(global_filter, ctx_filter),
+            ).all():
                 if tgt.lat is None or tgt.lng is None:
                     continue
                 calculate_for_apartment(apt, tgt)
@@ -352,6 +366,12 @@ def run_import_job(job_id: int) -> None:
         job.finished_at = datetime.utcnow()
         db.session.commit()
         logger.info("Import job %s finished, apartment_id=%s", job.id, apt.id)
+        # Schedule self-cleanup after 5 minutes so the poller can pick up the done status
+        try:
+            from app.services.importer.jobs import schedule_job_cleanup
+            schedule_job_cleanup(job.id, delay_seconds=300)
+        except Exception:
+            pass
     except Exception as e:
         db.session.rollback()
         logger.exception("Import job %s failed", job_id)

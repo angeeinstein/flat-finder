@@ -99,11 +99,7 @@ def detail(apt_id: int):
         abort(404)
     g.ctx.check_apartment(apt)
 
-    categories = (
-        RatingCategory.query.filter_by(is_active=True)
-        .order_by(RatingCategory.display_order, RatingCategory.id)
-        .all()
-    )
+    categories = g.ctx.category_query().all()
     my_ratings = {
         r.category_id: r
         for r in ApartmentRating.query.filter_by(apartment_id=apt_id, user_id=current_user.id).all()
@@ -124,7 +120,7 @@ def detail(apt_id: int):
         .order_by(TravelTime.target_id, TravelTime.mode)
         .all()
     )
-    targets = TargetAddress.query.filter_by(is_active=True).all()
+    targets = g.ctx.target_query().all()
     target_map = {t.id: t for t in targets}
 
     changes = apt.changes.limit(50).all()
@@ -283,8 +279,7 @@ def refresh(apt_id: int):
             enqueue_refresh(s.id)
         except Exception as e:
             flash(f"Could not enqueue refresh: {e}", "warning")
-    flash("Refresh enqueued.", "info")
-    return redirect(url_for("apartments.detail", apt_id=apt_id))
+    return redirect(url_for("apartments.detail", apt_id=apt_id, refreshing="1"))
 
 
 @bp.route("/<int:apt_id>/history")
@@ -325,12 +320,8 @@ def compare():
         order = {i: pos for pos, i in enumerate(ids)}
         apartments.sort(key=lambda a: order.get(a.id, 999))
 
-    categories = (
-        RatingCategory.query.filter_by(is_active=True)
-        .order_by(RatingCategory.display_order)
-        .all()
-    )
-    targets = TargetAddress.query.filter_by(is_active=True).all()
+    categories = g.ctx.category_query().all()
+    targets = g.ctx.target_query().all()
 
     personal_scores = {a.id: calculate_score(a.id, current_user.id) for a in apartments}
     avg_scores = {a.id: calculate_average_score(a.id) for a in apartments}

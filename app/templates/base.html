@@ -28,14 +28,16 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('apartments.create') }}"><i class="bi bi-plus-square"></i> Add manually</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('map.map_view') }}"><i class="bi bi-map"></i> Map</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('apartments.compare') }}"><i class="bi bi-columns-gap"></i> Compare</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('settings.targets') }}"><i class="bi bi-geo-alt"></i> Targets</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('settings.categories') }}"><i class="bi bi-stars"></i> Categories</a></li>
         {% if current_user.is_admin %}
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-shield-lock"></i> Admin</a>
             <ul class="dropdown-menu">
               <li><a class="dropdown-item" href="{{ url_for('admin.index') }}">Overview</a></li>
               <li><a class="dropdown-item" href="{{ url_for('admin.users') }}">Users</a></li>
-              <li><a class="dropdown-item" href="{{ url_for('admin.rating_categories') }}">Rating categories</a></li>
-              <li><a class="dropdown-item" href="{{ url_for('admin.target_addresses') }}">Target addresses</a></li>
+              <li><a class="dropdown-item" href="{{ url_for('admin.rating_categories') }}">Global category defaults</a></li>
+              <li><a class="dropdown-item" href="{{ url_for('admin.target_addresses') }}">Global target defaults</a></li>
               <li><a class="dropdown-item" href="{{ url_for('admin.duplicates') }}">Duplicates</a></li>
               <li><a class="dropdown-item" href="{{ url_for('admin.failed_jobs') }}">Failed jobs</a></li>
               <li><a class="dropdown-item" href="{{ url_for('admin.settings') }}">Settings</a></li>

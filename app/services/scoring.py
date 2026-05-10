@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
+from sqlalchemy import and_, or_
+
 from app.extensions import db
 from app.models.rating import ApartmentRating, RatingCategory
 
@@ -31,23 +33,47 @@ class ScoreBreakdownEntry(NamedTuple):
 
 
 def seed_default_categories(commit: bool = True) -> int:
-    """Insert the default set of rating categories if none exist yet."""
-    if RatingCategory.query.first():
+    """Insert the global default set of rating categories if none exist yet."""
+    if RatingCategory.query.filter(
+        RatingCategory.owner_id.is_(None), RatingCategory.team_id.is_(None)
+    ).first():
         return 0
     for order, (name, desc, weight) in enumerate(DEFAULT_CATEGORIES):
         db.session.add(RatingCategory(
             name=name, description=desc, weight=weight,
             min_score=0, max_score=10,
             display_order=order, is_active=True,
+            owner_id=None, team_id=None,
         ))
     if commit:
         db.session.commit()
     return len(DEFAULT_CATEGORIES)
 
 
+def _apt_categories(apt_id: int) -> list[RatingCategory]:
+    """Return the active rating categories visible for the given apartment's context."""
+    from app.models.apartment import Apartment
+    apt = db.session.get(Apartment, apt_id)
+    global_filter = and_(RatingCategory.owner_id.is_(None), RatingCategory.team_id.is_(None))
+    if apt is None:
+        ctx_filter = db.false()
+    elif apt.team_id is not None:
+        ctx_filter = RatingCategory.team_id == apt.team_id
+    elif apt.owner_id is not None:
+        ctx_filter = and_(RatingCategory.owner_id == apt.owner_id, RatingCategory.team_id.is_(None))
+    else:
+        ctx_filter = db.false()
+    return (
+        RatingCategory.query
+        .filter(RatingCategory.is_active.is_(True), or_(global_filter, ctx_filter))
+        .order_by(RatingCategory.display_order, RatingCategory.id)
+        .all()
+    )
+
+
 def calculate_score(apartment_id: int, user_id: int) -> float | None:
     """Weighted average over rated active categories, normalized to 0..100."""
-    cats = RatingCategory.query.filter_by(is_active=True).all()
+    cats = _apt_categories(apartment_id)
     if not cats:
         return None
     cat_map = {c.id: c for c in cats}
@@ -88,11 +114,7 @@ def calculate_average_score(apartment_id: int) -> float | None:
 
 def score_breakdown(apartment_id: int, user_id: int) -> list[ScoreBreakdownEntry]:
     """Per-category breakdown of a user's ratings for an apartment."""
-    cats = (
-        RatingCategory.query.filter_by(is_active=True)
-        .order_by(RatingCategory.display_order)
-        .all()
-    )
+    cats = _apt_categories(apartment_id)
     rating_map = {
         r.category_id: r for r in ApartmentRating.query.filter_by(
             apartment_id=apartment_id, user_id=user_id
@@ -111,7 +133,7 @@ def score_breakdown(apartment_id: int, user_id: int) -> list[ScoreBreakdownEntry
 
 
 def is_rating_complete(apartment_id: int, user_id: int) -> bool:
-    cats = RatingCategory.query.filter_by(is_active=True).all()
+    cats = _apt_categories(apartment_id)
     rated_ids = {
         r.category_id for r in ApartmentRating.query.filter_by(
             apartment_id=apartment_id, user_id=user_id

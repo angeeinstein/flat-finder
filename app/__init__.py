@@ -86,6 +86,7 @@ def _register_blueprints(app: Flask) -> None:
     from app.views.admin import bp as admin_bp
     from app.views.api import bp as api_bp
     from app.views.teams import bp as teams_bp
+    from app.views.settings import bp as settings_bp
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(main_bp)
@@ -94,6 +95,7 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(teams_bp, url_prefix="/teams")
+    app.register_blueprint(settings_bp, url_prefix="/settings")
 
     csrf.exempt(api_bp)  # API uses its own CSRF token in headers; simpler to exempt
 

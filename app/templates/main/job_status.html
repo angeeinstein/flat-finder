@@ -2,26 +2,32 @@
 {% block title %}Import job #{{ job.id }} · {{ app_name }}{% endblock %}
 
 {% block content %}
-<h1 class="h4 mb-3">Import job #{{ job.id }}</h1>
+<div class="d-flex align-items-center gap-2 mb-3">
+  <h1 class="h4 mb-0">Importing…</h1>
+  <div class="spinner-border spinner-border-sm text-primary" id="spinner" role="status" aria-label="Loading"></div>
+</div>
 
 <div class="card border-0 shadow-sm">
   <div class="card-body">
-    <div><strong>URL:</strong> <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer">{{ job.url }}</a></div>
-    <div><strong>Status:</strong> <span id="job-status" class="badge bg-{% if job.status.value == 'done' %}success{% elif job.status.value == 'failed' %}danger{% elif job.status.value == 'running' %}info{% else %}secondary{% endif %}">{{ job.status.value }}</span></div>
-    <div class="small text-muted mt-2"><strong>Started:</strong> {{ job.started_at.strftime('%Y-%m-%d %H:%M:%S') if job.started_at else '–' }}</div>
-    <div class="small text-muted"><strong>Finished:</strong> {{ job.finished_at.strftime('%Y-%m-%d %H:%M:%S') if job.finished_at else '–' }}</div>
+    <div class="text-truncate mb-2">
+      <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer" class="text-muted small">{{ job.url }}</a>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <strong>Status:</strong>
+      <span id="job-status" class="badge bg-{% if job.status.value == 'done' %}success{% elif job.status.value == 'failed' %}danger{% elif job.status.value == 'running' %}info{% else %}secondary{% endif %}">
+        {{ job.status.value }}
+      </span>
+    </div>
+    <div class="small text-muted mt-2">
+      <span>Started: {{ job.started_at.strftime('%H:%M:%S') if job.started_at else '–' }}</span>
+    </div>
     {% if job.error_message %}
       <div class="alert alert-danger mt-3"><strong>Error:</strong> {{ job.error_message }}</div>
     {% endif %}
     {% if job.apartment_id %}
-      <a id="apt-link" href="{{ url_for('apartments.detail', apt_id=job.apartment_id) }}" class="btn btn-primary mt-3">Open apartment</a>
-    {% endif %}
-    {% if job.status.value != 'running' %}
-    <form method="post" action="{{ url_for('main.delete_job', job_id=job.id) }}" class="d-inline mt-3"
-          onsubmit="return confirm('Delete this import job?')">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-outline-danger">Delete job</button>
-    </form>
+      <a id="apt-link" href="{{ url_for('apartments.detail', apt_id=job.apartment_id) }}" class="btn btn-primary mt-3">
+        <i class="bi bi-arrow-right-circle"></i> Open apartment
+      </a>
     {% endif %}
   </div>
 </div>
@@ -30,21 +36,34 @@
 {% block scripts %}
 <script>
 (function poll() {
-  if (['done','failed'].includes(document.getElementById('job-status').textContent.trim())) return;
+  const badge = document.getElementById('job-status');
+  const spinner = document.getElementById('spinner');
+  if (['done', 'failed'].includes(badge.textContent.trim())) {
+    spinner.hidden = true;
+    return;
+  }
   setTimeout(async () => {
     try {
       const data = await flatFinder.api({{ url_for('api.job_status', job_id=job.id)|tojson }});
-      const badge = document.getElementById('job-status');
       badge.textContent = data.status;
       badge.className = 'badge bg-' + ({'done':'success','failed':'danger','running':'info'}[data.status] || 'secondary');
       if (data.status === 'done' && data.apartment_url) {
-        location.reload();
+        spinner.hidden = true;
+        location.href = data.apartment_url;
       } else if (data.status === 'failed') {
+        spinner.hidden = true;
         location.reload();
       } else {
         poll();
       }
-    } catch (e) { setTimeout(poll, 4000); }
+    } catch (e) {
+      // Job was already deleted (404) — means it succeeded; go to dashboard
+      if (e.message && e.message.includes('404')) {
+        location.href = {{ url_for('main.dashboard')|tojson }};
+      } else {
+        setTimeout(poll, 4000);
+      }
+    }
   }, 2500);
 })();
 </script>

@@ -9,7 +9,7 @@ from flask_login import current_user, login_required
 from app.extensions import db
 from app.models.apartment import Apartment
 from app.models.duplicate import DuplicateCandidate, DuplicateStatus
-from app.models.job import ImportJob
+from app.models.job import ImportJob, ImportJobStatus
 from app.models.location import TargetAddress, TravelMode, TravelTime
 from app.models.rating import ApartmentRating, RatingCategory
 from app.models.status import StatusEnum, UserApartmentNote, UserApartmentStatus
@@ -109,7 +109,7 @@ def map_markers():
             "travel_distance_km": tt.distance_km if tt else None,
         })
 
-    targets = TargetAddress.query.filter_by(is_active=True).all()
+    targets = g.ctx.target_query().all()
     target_features = [
         {"id": t.id, "name": t.name, "lat": t.lat, "lng": t.lng, "address": t.address}
         for t in targets if t.lat is not None and t.lng is not None
@@ -177,6 +177,10 @@ def rate(apt_id: int):
         return jsonify({"error": "category_id required"}), 400
     cat = db.session.get(RatingCategory, cat_id)
     if not cat:
+        return jsonify({"error": "category not found"}), 404
+    # Ensure category is visible in this apartment's context
+    visible_ids = {c.id for c in g.ctx.category_query().all()}
+    if cat_id not in visible_ids:
         return jsonify({"error": "category not found"}), 404
 
     if score is None:
@@ -328,6 +332,22 @@ def delete_note(note_id: int):
     return jsonify({"ok": True})
 
 
+# -------------------- refresh status (for auto-reload polling) --------------------
+
+@bp.route("/apartments/<int:apt_id>/refresh-status")
+def refresh_status(apt_id: int):
+    """Returns whether a refresh job is still running for this apartment."""
+    apt = db.session.get(Apartment, apt_id)
+    if not apt:
+        abort(404)
+    g.ctx.check_apartment(apt)
+    running = ImportJob.query.filter(
+        ImportJob.apartment_id == apt_id,
+        ImportJob.status.in_([ImportJobStatus.PENDING, ImportJobStatus.RUNNING]),
+    ).first() is not None
+    return jsonify({"running": running})
+
+
 # -------------------- travel time recalculation --------------------
 
 @bp.route("/geocode/search")
@@ -367,7 +387,7 @@ def recalc_travel(apt_id: int):
         return jsonify({"error": "apartment has no coordinates"}), 400
     from app.services.routing import calculate_for_apartment
 
-    targets = TargetAddress.query.filter_by(is_active=True).all()
+    targets = g.ctx.target_query().all()
     n = 0
     for t in targets:
         if t.lat is None or t.lng is None:

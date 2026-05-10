@@ -79,7 +79,7 @@ def register_cli(app: Flask) -> None:
                 name="TU Wien",
                 address="Karlsplatz 13, 1040 Wien, Austria",
                 lat=48.198489, lng=16.369848,
-                is_active=True, is_personal=False,
+                is_active=True,
             ))
 
         # Sample apartments
@@ -125,16 +125,28 @@ def register_cli(app: Flask) -> None:
     @app.cli.command("recalc-travel-times")
     @with_appcontext
     def recalc_travel_times():
-        """Recalculate all travel times for all apartments and active targets."""
+        """Recalculate travel times using each apartment's own context targets."""
         from app.models.apartment import Apartment
         from app.models.location import TargetAddress
         from app.services.routing import calculate_for_apartment
+        from sqlalchemy import and_, or_
 
         apartments = Apartment.query.filter(Apartment.lat.isnot(None)).all()
-        targets = TargetAddress.query.filter_by(is_active=True).all()
+        global_filter = and_(TargetAddress.owner_id.is_(None), TargetAddress.team_id.is_(None))
         n = 0
         for apt in apartments:
+            if apt.team_id is not None:
+                ctx_filter = TargetAddress.team_id == apt.team_id
+            elif apt.owner_id is not None:
+                ctx_filter = and_(TargetAddress.owner_id == apt.owner_id, TargetAddress.team_id.is_(None))
+            else:
+                ctx_filter = db.false()
+            targets = TargetAddress.query.filter(
+                TargetAddress.is_active.is_(True), or_(global_filter, ctx_filter)
+            ).all()
             for tgt in targets:
+                if tgt.lat is None or tgt.lng is None:
+                    continue
                 calculate_for_apartment(apt, tgt)
                 n += 1
         db.session.commit()
@@ -145,6 +157,28 @@ def register_cli(app: Flask) -> None:
     def recalc_scores():
         """No-op: scores are computed on-demand."""
         click.echo("Scores are computed on the fly; nothing to recalc.")
+
+    @app.cli.command("backfill-targets")
+    @with_appcontext
+    def backfill_targets():
+        """Migrate TargetAddress.user_id → owner_id for existing personal targets."""
+        from app.models.location import TargetAddress
+        from sqlalchemy import update, text
+
+        # If owner_id column exists and user_id exists, copy user_id → owner_id where needed
+        try:
+            result = db.session.execute(
+                text("""
+                    UPDATE target_addresses
+                    SET owner_id = user_id
+                    WHERE user_id IS NOT NULL AND owner_id IS NULL
+                """)
+            )
+            db.session.commit()
+            click.echo(f"Backfilled owner_id for {result.rowcount} target addresses.")
+        except Exception as e:
+            db.session.rollback()
+            click.echo(f"Backfill targets skipped (may not be needed): {e}")
 
     @app.cli.command("backfill-owner-id")
     @with_appcontext

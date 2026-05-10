@@ -1,24 +1,34 @@
 {% extends "base.html" %}
-{% block title %}Rating categories · admin{% endblock %}
+{% block title %}Global Rating Defaults · admin{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between mb-3">
-  <h1 class="h4 mb-0">Rating categories</h1>
-  <a href="{{ url_for('admin.rating_category_new') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> New category</a>
+<div class="d-flex justify-content-between mb-2">
+  <h1 class="h4 mb-0">Global rating categories <small class="text-muted fs-6">(default templates)</small></h1>
+  <a href="{{ url_for('admin.rating_category_new') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> New</a>
 </div>
+<p class="text-muted small mb-3">These are global defaults visible to all users. Each user/team can copy them and customize their own via <a href="{{ url_for('settings.categories') }}">Settings → Categories</a>.</p>
 <div class="card border-0 shadow-sm">
   <div class="table-responsive">
     <table class="table mb-0">
-      <thead class="table-light"><tr><th>Order</th><th>Name</th><th>Weight</th><th>Range</th><th>Active</th><th></th></tr></thead>
+      <thead class="table-light">
+        <tr><th>Order</th><th>Name</th><th>Weight</th><th>Range</th><th>Active</th><th></th></tr>
+      </thead>
       <tbody>
       {% for c in categories %}
-        <tr>
+        <tr class="{% if not c.is_active %}text-muted{% endif %}">
           <td>{{ c.display_order }}</td>
           <td><strong>{{ c.name }}</strong><div class="small text-muted">{{ c.description or '' }}</div></td>
           <td>{{ c.weight }}</td>
           <td>{{ c.min_score }}–{{ c.max_score }}</td>
           <td>{% if c.is_active %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-muted"></i>{% endif %}</td>
-          <td><a href="{{ url_for('admin.rating_category_edit', cat_id=c.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a></td>
+          <td class="text-end">
+            <a href="{{ url_for('admin.rating_category_edit', cat_id=c.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+            <form method="post" action="{{ url_for('admin.rating_category_delete', cat_id=c.id) }}" class="d-inline"
+                  onsubmit="return confirm('Delete global category {{ c.name|e }}?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
         </tr>
       {% endfor %}
       </tbody>
