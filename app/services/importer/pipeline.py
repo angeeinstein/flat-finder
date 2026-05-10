@@ -30,14 +30,23 @@ logger = logging.getLogger(__name__)
 
 
 WARNING_RULES = {
-    "missing_address": lambda apt: not (apt.address and apt.city),
+    # Only flag when we have absolutely nothing locating the property —
+    # partial info (just a postal code, a city, or a street) is acceptable.
+    "missing_address": lambda apt: not any([
+        (apt.address or "").strip(),
+        (apt.city or "").strip(),
+        (apt.postal_code or "").strip(),
+    ]),
     "no_photos": lambda apt: not apt.images,
     "few_photos": lambda apt: 0 < len(apt.images) < 3,
     "high_deposit": lambda apt: (
         apt.deposit and apt.price and float(apt.deposit) > 4 * float(apt.price)
     ),
     "limited_lease": lambda apt: bool(apt.lease_duration_limited),
-    "geocoding_failed": lambda apt: bool(apt.address) and (apt.lat is None or apt.lng is None),
+    # Geocoding failure only matters when we have a meaningful street-level address.
+    "geocoding_failed": lambda apt: bool((apt.address or "").strip())
+        and bool((apt.city or apt.postal_code or "").strip())
+        and (apt.lat is None or apt.lng is None),
 }
 
 

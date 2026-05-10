@@ -24,14 +24,14 @@
 
 {% macro score_badge(score) %}
   {% if score is none %}
-    <span class="badge bg-secondary-subtle text-secondary">–</span>
+    <span class="score-pill s-none">–</span>
   {% else %}
     {% set s = score|round|int %}
-    {% if s >= 80 %}{% set color = "success" %}
-    {% elif s >= 60 %}{% set color = "primary" %}
-    {% elif s >= 40 %}{% set color = "warning" %}
-    {% else %}{% set color = "danger" %}{% endif %}
-    <span class="badge bg-{{ color }}">{{ s }}</span>
+    {% if s >= 80 %}{% set cls = "s-high" %}
+    {% elif s >= 60 %}{% set cls = "s-mid" %}
+    {% elif s >= 40 %}{% set cls = "s-low" %}
+    {% else %}{% set cls = "s-bad" %}{% endif %}
+    <span class="score-pill {{ cls }}">{{ s }}</span>
   {% endif %}
 {% endmacro %}
 
@@ -47,15 +47,13 @@
   {% if status %}
     {% set v = status.value if status.value is defined else status %}
     {% set label = v.replace('_', ' ').title() %}
-    {% set color_map = {'favorite':'success','accepted':'success','interesting':'primary','viewing_scheduled':'info','viewed':'info','contacted':'info','applied':'primary','rejected':'danger','archived':'secondary','new':'secondary'} %}
-    {% set c = color_map.get(v, 'secondary') %}
-    <span class="badge bg-{{ c }}">{{ label }}</span>
+    <span class="status-pill status-{{ v }}">{{ label }}</span>
   {% endif %}
 {% endmacro %}
 
 {% macro pagination(page, total_pages, endpoint, args={}) %}
   {% if total_pages > 1 %}
-    <nav><ul class="pagination justify-content-center">
+    <nav class="mt-4"><ul class="pagination justify-content-center">
       {% set prev_page = page - 1 %}
       {% set next_page = page + 1 %}
       <li class="page-item {{ 'disabled' if page <= 1 else '' }}">
@@ -67,4 +65,49 @@
       </li>
     </ul></nav>
   {% endif %}
+{% endmacro %}
+
+{# Reusable apartment card for dashboard / search results #}
+{% macro apt_card(a, personal_score, status, travel=None, source=None) %}
+<a href="{{ url_for('apartments.detail', apt_id=a.id) }}" class="apt-card">
+  <div class="apt-photo">
+    {% if a.primary_image %}
+      <img src="{{ url_for('api.image_thumbnail', image_id=a.primary_image.id) }}" alt="" loading="lazy">
+    {% else %}
+      <div class="placeholder-icon"><i class="bi bi-image"></i></div>
+    {% endif %}
+    {% if a.is_offline %}<span class="apt-photo-badge">offline</span>
+    {% elif source and source.platform %}<span class="apt-photo-badge">{{ source.platform }}</span>{% endif %}
+    <span class="apt-score">{{ score_badge(personal_score) }}</span>
+  </div>
+  <div class="apt-body">
+    <div class="d-flex align-items-baseline justify-content-between">
+      <div class="apt-price">
+        {% if a.computed_total_monthly_cost %}€{{ '%.0f'|format(a.computed_total_monthly_cost) }}{% else %}—{% endif %}
+        <span class="apt-price-meta">/ mo</span>
+      </div>
+      {% if a.cost_per_m2 %}
+        <span class="apt-price-meta">€{{ '%.0f'|format(a.cost_per_m2) }}/m²</span>
+      {% endif %}
+    </div>
+    <div class="apt-title">{{ a.title or 'Apartment #' ~ a.id }}</div>
+    <div class="apt-address">
+      <i class="bi bi-geo-alt"></i>
+      {{ a.address or a.city or a.postal_code or '—' }}
+    </div>
+    <div class="apt-meta">
+      {% if a.living_area_m2 %}<span><strong>{{ '%.0f'|format(a.living_area_m2) }}</strong> m²</span>{% endif %}
+      {% if a.rooms %}<span><strong>{{ a.rooms|round(1) if a.rooms != a.rooms|round else a.rooms|int }}</strong> rooms</span>{% endif %}
+      {% if a.has_balcony %}<span><i class="bi bi-tree"></i> Balcony</span>{% endif %}
+      {% if a.has_parking %}<span><i class="bi bi-p-square"></i> Parking</span>{% endif %}
+      {% if travel and travel.get('car') %}
+        <span><i class="bi bi-car-front"></i> {{ '%.0f'|format(travel['car'].duration_min) }} min</span>
+      {% endif %}
+    </div>
+    <div class="apt-tags">
+      {{ status_badge(status) }}
+      {{ warning_badges(a.warning_flags) }}
+    </div>
+  </div>
+</a>
 {% endmacro %}

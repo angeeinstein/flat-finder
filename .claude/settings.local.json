@@ -7,7 +7,9 @@
       "Bash(venv/Scripts/pip uninstall *)",
       "Bash(venv/Scripts/python -m pytest -v --tb=short)",
       "Bash(venv/Scripts/python -c ' *)",
-      "Bash(venv/Scripts/python -m pytest -q)"
+      "Bash(venv/Scripts/python -m pytest -q)",
+      "Bash(venv/Scripts/python -m pytest tests/test_importers.py -x -q)",
+      "Bash(venv/Scripts/python -m pytest -x -q)"
     ]
   }
 }

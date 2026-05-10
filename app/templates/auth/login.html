@@ -5,11 +5,13 @@
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-6 col-lg-4">
-    <div class="card shadow-sm border-0 mt-md-5">
+    <div class="card mt-md-5">
       <div class="card-body p-4">
-        <h1 class="h4 mb-4 text-center">
-          <i class="bi bi-house-heart text-primary"></i> {{ app_name }}
-        </h1>
+        <div class="text-center mb-4">
+          <div class="mb-2" style="font-size:2rem; color: var(--ff-primary)"><i class="bi bi-house-heart-fill"></i></div>
+          <h1 class="h4 mb-1">{{ app_name }}</h1>
+          <div class="text-muted-soft small">Sign in to manage your apartment search</div>
+        </div>
         <form method="post" novalidate>
           {{ form.hidden_tag() }}
           {{ render_field(form.username) }}
@@ -19,7 +21,7 @@
             {{ form.remember.label(class_="form-check-label") }}
           </div>
           <div class="d-grid">
-            {{ form.submit(class_="btn btn-primary") }}
+            {{ form.submit(class_="btn btn-primary btn-lg") }}
           </div>
         </form>
       </div>

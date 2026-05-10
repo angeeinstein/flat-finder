@@ -31,10 +31,14 @@ class BaseConfig:
         "DATABASE_URL", "postgresql://flatfinder:flatfinder@localhost:5432/flatfinder"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_pre_ping": True,
-        "connect_args": {"client_encoding": "utf8"},
-    }
+    # Force UTF-8 for psycopg2/PostgreSQL connections (SQLite ignores connect_args).
+    if SQLALCHEMY_DATABASE_URI.startswith("postgres"):
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "pool_pre_ping": True,
+            "connect_args": {"client_encoding": "utf8"},
+        }
+    else:
+        SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
 
     REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
@@ -94,6 +98,8 @@ class TestingConfig(BaseConfig):
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "TEST_DATABASE_URL", "sqlite:///:memory:"
     )
+    # SQLite doesn't accept psycopg2-specific connect_args.
+    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
     SECRET_KEY = "test-secret"
     LOGIN_RATE_LIMIT = "1000 per minute"
     ROUTING_PROVIDER = "mock"

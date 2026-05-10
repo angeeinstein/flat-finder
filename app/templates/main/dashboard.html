@@ -1,18 +1,21 @@
 {% extends "base.html" %}
-{% from "_macros.html" import render_field, score_badge, status_badge, warning_badges, pagination %}
+{% from "_macros.html" import render_field, score_badge, status_badge, warning_badges, pagination, apt_card %}
 
 {% block title %}Dashboard · {{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
-  <h1 class="h4 mb-0"><i class="bi bi-grid"></i> Dashboard <span class="text-muted small">({{ total }} apartments)</span></h1>
-  <div class="btn-group">
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+  <div>
+    <h1 class="h4 mb-1">Your apartments</h1>
+    <div class="text-muted-soft small">{{ total }} {{ 'listing' if total == 1 else 'listings' }} tracked</div>
+  </div>
+  <div class="d-flex gap-2">
     <a href="{{ url_for('main.import_url') }}" class="btn btn-primary"><i class="bi bi-link-45deg"></i> Import URL</a>
-    <a href="{{ url_for('apartments.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-square"></i> Add manually</a>
+    <a href="{{ url_for('apartments.create') }}" class="btn btn-outline-secondary"><i class="bi bi-plus-square"></i> Add manually</a>
   </div>
 </div>
 
-<form method="get" class="card border-0 shadow-sm mb-3">
+<form method="get" class="card mb-3">
   <div class="card-body">
     <div class="row g-2 align-items-end">
       <div class="col-md-3">{{ render_field(form.q, label_visible=false, placeholder="Search title, description, address…") }}</div>
@@ -37,7 +40,7 @@
         </select>
       </div>
       <div class="col-auto ms-auto">
-        <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-funnel"></i> Apply</button>
+        <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-funnel"></i> Apply</button>
         <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-link">Reset</a>
       </div>
     </div>
@@ -45,101 +48,21 @@
 </form>
 
 {% if not apartments %}
-  <div class="alert alert-info">
-    No apartments match your filters yet.
-    <a href="{{ url_for('main.import_url') }}" class="alert-link">Import a listing URL</a>
-    or <a href="{{ url_for('apartments.create') }}" class="alert-link">add one manually</a>.
+  <div class="alert alert-info text-center py-5">
+    <div style="font-size:2.5rem"><i class="bi bi-house-add"></i></div>
+    <h2 class="h5 mt-2 mb-1">No apartments yet</h2>
+    <p class="mb-3">Paste a listing URL or add one manually to get started.</p>
+    <a href="{{ url_for('main.import_url') }}" class="btn btn-primary"><i class="bi bi-link-45deg"></i> Import URL</a>
+    <a href="{{ url_for('apartments.create') }}" class="btn btn-outline-secondary"><i class="bi bi-plus-square"></i> Add manually</a>
   </div>
 {% else %}
 
-<!-- Mobile cards -->
-<div class="row g-3 mobile-only">
+<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4 g-3">
   {% for a in apartments %}
-  <div class="col-12">
-    <a href="{{ url_for('apartments.detail', apt_id=a.id) }}" class="card card-apartment text-decoration-none text-reset">
-      {% if a.primary_image %}
-        <img class="thumb" src="{{ url_for('api.image_thumbnail', image_id=a.primary_image.id) }}" alt="">
-      {% else %}
-        <div class="thumb d-flex align-items-center justify-content-center text-muted"><i class="bi bi-image" style="font-size:2rem"></i></div>
-      {% endif %}
-      <div class="card-body">
-        <div class="d-flex justify-content-between">
-          <h5 class="mb-1">{{ a.title or 'Apartment #' ~ a.id }}</h5>
-          {{ score_badge(personal_scores.get(a.id)) }}
-        </div>
-        <div class="text-muted small">{{ a.address or a.city or '–' }}</div>
-        <div class="d-flex flex-wrap gap-3 mt-2">
-          <span><strong>{{ '€%.0f'|format(a.computed_total_monthly_cost) if a.computed_total_monthly_cost else '–' }}</strong></span>
-          <span>{{ '%.0f m²'|format(a.living_area_m2) if a.living_area_m2 else '–' }}</span>
-          <span>{{ a.rooms or '–' }} rooms</span>
-          {% if selected_target_id and travel_for.get(a.id, {}).get('car') %}
-            <span><i class="bi bi-car-front"></i> {{ '%.0f min'|format(travel_for[a.id]['car'].duration_min) }}</span>
-          {% endif %}
-        </div>
-        <div class="mt-2">
-          {{ status_badge(statuses.get(a.id)) }}
-          {{ warning_badges(a.warning_flags) }}
-          {% if a.is_offline %}<span class="badge bg-secondary">offline</span>{% endif %}
-        </div>
-      </div>
-    </a>
+  <div class="col">
+    {{ apt_card(a, personal_scores.get(a.id), statuses.get(a.id), travel_for.get(a.id), a.primary_source) }}
   </div>
   {% endfor %}
-</div>
-
-<!-- Desktop table -->
-<div class="card border-0 shadow-sm desktop-only">
-  <div class="table-responsive">
-    <table class="table dashboard-table mb-0 align-middle">
-      <thead class="table-light">
-        <tr>
-          <th></th><th>Title / address</th><th class="text-end">Total</th><th class="text-end">€/m²</th>
-          <th class="text-end">Area</th><th class="text-end">Rooms</th><th>Score</th>
-          <th>Status</th>
-          {% if selected_target_id %}<th>Travel</th>{% endif %}
-          <th>Source</th><th>Flags</th><th></th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for a in apartments %}
-        <tr>
-          <td>
-            {% if a.primary_image %}
-              <img class="thumb-table" src="{{ url_for('api.image_thumbnail', image_id=a.primary_image.id) }}" alt="">
-            {% else %}
-              <div class="thumb-table d-flex align-items-center justify-content-center text-muted"><i class="bi bi-image"></i></div>
-            {% endif %}
-          </td>
-          <td>
-            <a href="{{ url_for('apartments.detail', apt_id=a.id) }}" class="fw-semibold text-reset text-decoration-none">{{ a.title or 'Apartment #' ~ a.id }}</a>
-            <div class="small text-muted">{{ a.address or '' }}{% if a.city %} · {{ a.city }}{% endif %}</div>
-          </td>
-          <td class="text-end">{{ '€%.0f'|format(a.computed_total_monthly_cost) if a.computed_total_monthly_cost else '–' }}</td>
-          <td class="text-end">{{ '€%.1f'|format(a.cost_per_m2) if a.cost_per_m2 else '–' }}</td>
-          <td class="text-end">{{ '%.0f m²'|format(a.living_area_m2) if a.living_area_m2 else '–' }}</td>
-          <td class="text-end">{{ a.rooms or '–' }}</td>
-          <td>{{ score_badge(personal_scores.get(a.id)) }}</td>
-          <td>{{ status_badge(statuses.get(a.id)) }}</td>
-          {% if selected_target_id %}
-            <td class="small">
-              {% set tt = travel_for.get(a.id, {}).get('car') %}
-              {% if tt %}<span title="car {{ '%.1f km'|format(tt.distance_km) }}"><i class="bi bi-car-front"></i> {{ '%.0f min'|format(tt.duration_min) }}</span>{% else %}–{% endif %}
-            </td>
-          {% endif %}
-          <td class="small text-muted">
-            {% if a.primary_source %}
-              <a href="{{ a.primary_source.url }}" target="_blank" rel="noopener noreferrer" title="{{ a.primary_source.url }}">{{ a.primary_source.platform or 'link' }} <i class="bi bi-box-arrow-up-right"></i></a>
-            {% endif %}
-          </td>
-          <td>{{ warning_badges(a.warning_flags) }}{% if a.is_offline %}<span class="badge bg-secondary">offline</span>{% endif %}</td>
-          <td class="text-end">
-            <a href="{{ url_for('apartments.detail', apt_id=a.id) }}" class="btn btn-sm btn-outline-primary">Open</a>
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
 </div>
 
 {{ pagination(page, total_pages, 'main.dashboard', request.args.to_dict()) }}
