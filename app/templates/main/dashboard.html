@@ -9,43 +9,53 @@
     <h1 class="h4 mb-1">Your apartments</h1>
     <div class="text-muted-soft small">{{ total }} {{ 'listing' if total == 1 else 'listings' }} tracked</div>
   </div>
-  <div class="d-flex gap-2">
+  <div class="d-flex gap-2 align-items-center">
+    <button class="btn btn-outline-secondary btn-sm" type="button"
+            id="filterToggle"
+            data-bs-toggle="collapse" data-bs-target="#filterPanel"
+            aria-expanded="{{ 'true' if is_filtered else 'false' }}"
+            aria-controls="filterPanel">
+      <i class="bi bi-funnel"></i> Filters
+      {% if is_filtered %}<span class="badge bg-primary ms-1">active</span>{% endif %}
+    </button>
     <a href="{{ url_for('main.import_url') }}" class="btn btn-primary"><i class="bi bi-link-45deg"></i> Import URL</a>
     <a href="{{ url_for('apartments.create') }}" class="btn btn-outline-secondary"><i class="bi bi-plus-square"></i> Add manually</a>
   </div>
 </div>
 
-<form method="get" class="card mb-3">
-  <div class="card-body">
-    <div class="row g-2 align-items-end">
-      <div class="col-md-3">{{ render_field(form.q, label_visible=false, placeholder="Search title, description, address…") }}</div>
-      <div class="col-6 col-md-1">{{ render_field(form.min_price, label_visible=false, placeholder="Min €") }}</div>
-      <div class="col-6 col-md-1">{{ render_field(form.max_price, label_visible=false, placeholder="Max €") }}</div>
-      <div class="col-6 col-md-1">{{ render_field(form.min_area, label_visible=false, placeholder="Min m²") }}</div>
-      <div class="col-6 col-md-1">{{ render_field(form.max_area, label_visible=false, placeholder="Max m²") }}</div>
-      <div class="col-6 col-md-1">{{ render_field(form.min_rooms, label_visible=false, placeholder="Rooms") }}</div>
-      <div class="col-6 col-md-2">{{ render_field(form.city, label_visible=false, placeholder="City") }}</div>
-      <div class="col-6 col-md-2">{{ render_field(form.sort, label_visible=false) }}</div>
-    </div>
-    <div class="row g-2 mt-1 align-items-center">
-      <div class="col-auto"><div class="form-check form-check-inline">{{ form.has_balcony(class_="form-check-input") }} {{ form.has_balcony.label(class_="form-check-label") }}</div></div>
-      <div class="col-auto"><div class="form-check form-check-inline">{{ form.has_parking(class_="form-check-input") }} {{ form.has_parking.label(class_="form-check-label") }}</div></div>
-      <div class="col-auto"><div class="form-check form-check-inline">{{ form.online_only(class_="form-check-input") }} {{ form.online_only.label(class_="form-check-label") }}</div></div>
-      <div class="col-md-3">
-        <select name="target_id" class="form-select form-select-sm" onchange="this.form.submit()">
-          <option value="">— Travel time target —</option>
-          {% for t in targets %}
-          <option value="{{ t.id }}" {{ 'selected' if selected_target_id == t.id }}>{{ t.name }}</option>
-          {% endfor %}
-        </select>
+<div class="collapse {% if is_filtered %}show{% endif %}" id="filterPanel">
+  <form method="get" class="card mb-3">
+    <div class="card-body">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">{{ render_field(form.q, label_visible=false, placeholder="Search title, description, address…") }}</div>
+        <div class="col-6 col-md-1">{{ render_field(form.min_price, label_visible=false, placeholder="Min €") }}</div>
+        <div class="col-6 col-md-1">{{ render_field(form.max_price, label_visible=false, placeholder="Max €") }}</div>
+        <div class="col-6 col-md-1">{{ render_field(form.min_area, label_visible=false, placeholder="Min m²") }}</div>
+        <div class="col-6 col-md-1">{{ render_field(form.max_area, label_visible=false, placeholder="Max m²") }}</div>
+        <div class="col-6 col-md-1">{{ render_field(form.min_rooms, label_visible=false, placeholder="Rooms") }}</div>
+        <div class="col-6 col-md-2">{{ render_field(form.city, label_visible=false, placeholder="City") }}</div>
+        <div class="col-6 col-md-2">{{ render_field(form.sort, label_visible=false) }}</div>
       </div>
-      <div class="col-auto ms-auto">
-        <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-funnel"></i> Apply</button>
-        <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-link">Reset</a>
+      <div class="row g-2 mt-1 align-items-center">
+        <div class="col-auto"><div class="form-check form-check-inline">{{ form.has_balcony(class_="form-check-input") }} {{ form.has_balcony.label(class_="form-check-label") }}</div></div>
+        <div class="col-auto"><div class="form-check form-check-inline">{{ form.has_parking(class_="form-check-input") }} {{ form.has_parking.label(class_="form-check-label") }}</div></div>
+        <div class="col-auto"><div class="form-check form-check-inline">{{ form.online_only(class_="form-check-input") }} {{ form.online_only.label(class_="form-check-label") }}</div></div>
+        <div class="col-md-3">
+          <select name="target_id" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">— Travel time target —</option>
+            {% for t in targets %}
+            <option value="{{ t.id }}" {{ 'selected' if selected_target_id == t.id }}>{{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-auto ms-auto">
+          <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-funnel"></i> Apply</button>
+          <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-link">Reset</a>
+        </div>
       </div>
     </div>
-  </div>
-</form>
+  </form>
+</div>
 
 {% if not apartments %}
   <div class="alert alert-info text-center py-5">

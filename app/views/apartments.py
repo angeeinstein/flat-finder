@@ -14,8 +14,10 @@ from app.models.apartment import Apartment
 from app.models.listing import ApartmentChange, ListingSource
 from app.models.location import TargetAddress, TravelMode, TravelTime
 from app.models.rating import ApartmentRating, RatingCategory
+from app.models.audit import AuditLog
 from app.models.status import StatusEnum, UserApartmentNote, UserApartmentStatus
 from app.models.tag import Tag
+from app.models.user import User
 from app.services.audit import log_action
 from app.services.scoring import (
     calculate_average_score,
@@ -129,6 +131,28 @@ def detail(apt_id: int):
     tag_form = TagForm()
     all_tags = Tag.query.order_by(Tag.name).all()
 
+    # All users who have rated this apartment (for team score display)
+    rater_ids = [
+        uid for (uid,) in db.session.query(ApartmentRating.user_id)
+        .filter_by(apartment_id=apt_id).distinct().all()
+    ]
+    raters = {u.id: u for u in User.query.filter(User.id.in_(rater_ids)).all()}
+    user_scores = [
+        (raters[uid], calculate_score(apt_id, uid))
+        for uid in rater_ids
+        if uid in raters
+    ]
+    user_scores.sort(key=lambda x: (x[1] is None, -(x[1] or 0)))
+
+    # Recent activity log entries for this apartment
+    activity = (
+        AuditLog.query
+        .filter_by(target_type="Apartment", target_id=apt_id)
+        .order_by(AuditLog.created_at.desc())
+        .limit(20)
+        .all()
+    )
+
     return render_template(
         "apartments/detail.html",
         apt=apt,
@@ -147,6 +171,8 @@ def detail(apt_id: int):
         note_form=note_form,
         tag_form=tag_form,
         all_tags=all_tags,
+        user_scores=user_scores,
+        activity=activity,
     )
 
 

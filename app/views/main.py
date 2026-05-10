@@ -94,6 +94,10 @@ def dashboard():
 
     total_pages = (total + per_page - 1) // per_page
 
+    _filter_keys = ["q", "min_price", "max_price", "min_area", "max_area",
+                    "min_rooms", "city", "has_balcony", "has_parking", "online_only", "target_id"]
+    is_filtered = any(request.args.get(k) for k in _filter_keys)
+
     return render_template(
         "main/dashboard.html",
         apartments=apartments,
@@ -107,6 +111,7 @@ def dashboard():
         page=page,
         total_pages=total_pages,
         total=total,
+        is_filtered=is_filtered,
     )
 
 

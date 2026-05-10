@@ -2,35 +2,88 @@
 {% block title %}App settings · admin{% endblock %}
 
 {% block content %}
-<h1 class="h4 mb-3">Application settings</h1>
+<h1 class="h4 mb-1">Application settings</h1>
+<p class="text-muted small mb-4">Changes take effect immediately after saving.</p>
 
-<div class="card border-0 shadow-sm mb-3">
-  <div class="card-body">
-    <form method="post" action="{{ url_for('admin.settings_save') }}" class="row g-2 align-items-end">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="col-md-3"><label class="form-label small">Key</label><input class="form-control" name="key" required></div>
-      <div class="col-md-5"><label class="form-label small">Value</label><input class="form-control" name="value"></div>
-      <div class="col-md-3"><label class="form-label small">Description</label><input class="form-control" name="description"></div>
-      <div class="col-md-1 d-grid"><button class="btn btn-primary">Save</button></div>
-    </form>
+<form method="post" action="{{ url_for('admin.settings_save_bulk') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="row g-3">
+    {% for s in settings %}
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <label for="setting_{{ s.key }}" class="form-label fw-semibold mb-0">{{ s.label }}</label>
+          <div class="text-muted small mb-2">{{ s.description }}</div>
+          {% if s.type == 'bool' %}
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch"
+                     id="setting_{{ s.key }}" name="{{ s.key }}"
+                     value="true"
+                     {{ 'checked' if s.value in ('true', '1', 'yes') }}>
+              <label class="form-check-label" for="setting_{{ s.key }}">Enabled</label>
+            </div>
+          {% elif s.type == 'select' %}
+            <select class="form-select" id="setting_{{ s.key }}" name="{{ s.key }}">
+              {% for val, label in s.options %}
+                <option value="{{ val }}" {{ 'selected' if s.value == val }}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          {% elif s.type == 'number' %}
+            <input type="number" class="form-control" id="setting_{{ s.key }}"
+                   name="{{ s.key }}" value="{{ s.value }}">
+          {% else %}
+            <input type="text" class="form-control" id="setting_{{ s.key }}"
+                   name="{{ s.key }}" value="{{ s.value }}">
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
   </div>
-</div>
+  <div class="mt-4">
+    <button class="btn btn-primary"><i class="bi bi-floppy"></i> Save all settings</button>
+  </div>
+</form>
 
-<div class="card border-0 shadow-sm">
+{% if custom %}
+<hr class="my-4">
+<h2 class="h6 text-muted">Custom settings</h2>
+<div class="card border-0 shadow-sm mb-3">
   <div class="table-responsive">
     <table class="table mb-0">
-      <thead class="table-light"><tr><th>Key</th><th>Value</th><th>Description</th><th>Updated</th></tr></thead>
+      <thead class="table-light"><tr><th>Key</th><th>Value</th><th>Description</th><th>Updated</th><th></th></tr></thead>
       <tbody>
-      {% for s in items %}
+      {% for s in custom %}
         <tr>
           <td><strong>{{ s.key }}</strong></td>
           <td class="small">{{ s.value }}</td>
           <td class="small text-muted">{{ s.description or '' }}</td>
           <td class="small text-muted">{{ s.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>
+            <form method="post" action="{{ url_for('admin.settings_delete') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="key" value="{{ s.key }}">
+              <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete setting \'{{ s.key }}\'?')">Delete</button>
+            </form>
+          </td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <h2 class="h6 mb-3">Add custom setting</h2>
+    <form method="post" action="{{ url_for('admin.settings_save') }}" class="row g-2 align-items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="col-md-3"><label class="form-label small">Key</label><input class="form-control" name="key" required></div>
+      <div class="col-md-5"><label class="form-label small">Value</label><input class="form-control" name="value"></div>
+      <div class="col-md-3"><label class="form-label small">Description</label><input class="form-control" name="description"></div>
+      <div class="col-md-1 d-grid"><button class="btn btn-outline-secondary">Add</button></div>
+    </form>
   </div>
 </div>
 {% endblock %}

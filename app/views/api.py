@@ -250,6 +250,8 @@ def set_status(apt_id: int):
         )
         db.session.add(row)
     db.session.commit()
+    log_action("apartment_status_changed", target_type="Apartment", target_id=apt_id,
+               details={"status": status_enum.value})
     return jsonify({"ok": True, "status": status_enum.value})
 
 
@@ -273,6 +275,8 @@ def add_tag(apt_id: int):
     if tag not in apt.tags:
         apt.tags.append(tag)
     db.session.commit()
+    log_action("apartment_tag_added", target_type="Apartment", target_id=apt_id,
+               details={"tag": tag.name})
     return jsonify({"ok": True, "tag": {"id": tag.id, "name": tag.name, "color": tag.color}})
 
 

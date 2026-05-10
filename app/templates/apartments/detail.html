@@ -170,9 +170,22 @@
     <!-- Rating -->
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-body">
-        <h2 class="h5 mb-3">Your rating
-          <span class="float-end">Personal: {{ score_badge(personal_score) }} · Avg: {{ score_badge(avg_score) }}</span>
-        </h2>
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <h2 class="h5 mb-0">Ratings</h2>
+          <div class="d-flex gap-2 align-items-center flex-wrap">
+            {% if user_scores %}
+              {% for u, sc in user_scores %}
+                <span class="badge {% if u.id == current_user.id %}bg-primary{% else %}bg-secondary{% endif %} d-flex align-items-center gap-1">
+                  <i class="bi bi-person"></i> {{ u.username }}:
+                  {% if sc is not none %}{{ sc }}{% else %}–{% endif %}
+                </span>
+              {% endfor %}
+            {% endif %}
+            {% if avg_score is not none and user_scores|length > 1 %}
+              <span class="badge bg-success"><i class="bi bi-people"></i> Combined: {{ avg_score }}</span>
+            {% endif %}
+          </div>
+        </div>
         <div id="rating-list">
           {% for entry in breakdown %}
             {% set existing = my_ratings.get(entry.category_id) %}
@@ -285,10 +298,17 @@
       </div>
     </div>
 
-    <!-- Sources -->
-    <div class="card border-0 shadow-sm">
+    <!-- Sources + who imported -->
+    <div class="card border-0 shadow-sm mb-3">
       <div class="card-body">
         <h2 class="h6">Sources</h2>
+        {% if apt.created_by %}
+        <div class="small text-muted mb-2">
+          <i class="bi bi-person-plus"></i>
+          Added by <strong>{{ apt.created_by.username }}</strong>
+          {% if apt.created_at %} on {{ apt.created_at.strftime('%Y-%m-%d') }}{% endif %}
+        </div>
+        {% endif %}
         {% for src in apt.listing_sources %}
         <div class="small mb-1">
           <a href="{{ src.url }}" target="_blank" rel="noopener noreferrer">{{ src.platform or 'link' }} <i class="bi bi-box-arrow-up-right"></i></a>
@@ -298,6 +318,30 @@
         {% endfor %}
       </div>
     </div>
+
+    <!-- Activity log -->
+    {% if activity %}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h2 class="h6 mb-2">Activity</h2>
+        <ul class="list-unstyled mb-0" style="font-size:0.82rem">
+          {% for entry in activity %}
+          <li class="d-flex gap-2 py-1 border-bottom">
+            <span class="text-muted" style="white-space:nowrap">{{ entry.created_at.strftime('%m-%d %H:%M') }}</span>
+            <span>
+              <strong>{{ entry.user.username if entry.user else 'System' }}</strong>
+              {{ entry.action.replace('_', ' ') }}
+              {% if entry.details %}
+                {% if entry.details.get('category_id') %}· score {{ entry.details.get('score', '') }}{% endif %}
+                {% if entry.details.get('status') %}· {{ entry.details.get('status') }}{% endif %}
+              {% endif %}
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

@@ -245,6 +245,20 @@ def target_address_edit(tid: int):
     return render_template("admin/target_edit.html", form=form, target=t)
 
 
+@bp.route("/target-addresses/<int:tid>/delete", methods=["POST"])
+def target_address_delete(tid: int):
+    t = db.session.get(TargetAddress, tid)
+    if not t:
+        abort(404)
+    name = t.name
+    db.session.delete(t)
+    db.session.commit()
+    log_action("target_address_deleted", target_type="TargetAddress", target_id=tid,
+               details={"name": name})
+    flash(f"Target '{name}' deleted.", "success")
+    return redirect(url_for("admin.target_addresses"))
+
+
 # -------------------- duplicates --------------------
 
 @bp.route("/duplicates")
@@ -342,10 +356,79 @@ def failed_job_retry(job_id: int):
 
 # -------------------- settings --------------------
 
+KNOWN_SETTINGS: list[dict] = [
+    {
+        "key": "app_name",
+        "label": "App display name",
+        "description": "Shown in the browser tab and navbar.",
+        "type": "text",
+        "default": "Flat Finder",
+    },
+    {
+        "key": "max_images_per_listing",
+        "label": "Max images per listing",
+        "description": "Maximum number of photos downloaded per import (1–100).",
+        "type": "number",
+        "default": "30",
+    },
+    {
+        "key": "import_http_timeout",
+        "label": "Import HTTP timeout (seconds)",
+        "description": "Seconds to wait when fetching a listing URL.",
+        "type": "number",
+        "default": "15",
+    },
+    {
+        "key": "score_display_mode",
+        "label": "Score display on dashboard",
+        "description": "Which score to show on cards: your personal score or the team average.",
+        "type": "select",
+        "options": [("personal", "Personal (my ratings)"), ("combined", "Combined (all users' average)")],
+        "default": "personal",
+    },
+    {
+        "key": "allow_registration",
+        "label": "Allow self-registration",
+        "description": "Let new users sign up without an admin creating their account first.",
+        "type": "bool",
+        "default": "false",
+    },
+    {
+        "key": "routing_provider",
+        "label": "Routing provider",
+        "description": "Backend used for travel-time calculations.",
+        "type": "select",
+        "options": [("mock", "Mock (straight-line estimate)"), ("osrm", "OSRM (self-hosted)"), ("openrouteservice", "OpenRouteService (API key required)")],
+        "default": "mock",
+    },
+    {
+        "key": "osrm_base_url",
+        "label": "OSRM base URL",
+        "description": "Base URL of your OSRM instance (only used when routing provider is OSRM).",
+        "type": "text",
+        "default": "",
+    },
+    {
+        "key": "openrouteservice_api_key",
+        "label": "OpenRouteService API key",
+        "description": "API key for openrouteservice.org (only used when routing provider is OpenRouteService).",
+        "type": "text",
+        "default": "",
+    },
+]
+
+
 @bp.route("/settings")
 def settings():
-    items = AppSetting.query.order_by(AppSetting.key).all()
-    return render_template("admin/settings.html", items=items)
+    db_values = {s.key: s.value for s in AppSetting.query.all()}
+    settings_with_values = [
+        {**s, "value": db_values.get(s["key"], s["default"])}
+        for s in KNOWN_SETTINGS
+    ]
+    custom = [s for s in AppSetting.query.order_by(AppSetting.key).all()
+              if s.key not in {k["key"] for k in KNOWN_SETTINGS}]
+    return render_template("admin/settings.html",
+                           settings=settings_with_values, custom=custom)
 
 
 @bp.route("/settings/save", methods=["POST"])
@@ -358,6 +441,36 @@ def settings_save():
         flash("Setting saved.", "success")
     else:
         flash("Invalid form data.", "danger")
+    return redirect(url_for("admin.settings"))
+
+
+@bp.route("/settings/save-bulk", methods=["POST"])
+def settings_save_bulk():
+    known_keys = {s["key"]: s for s in KNOWN_SETTINGS}
+    for key, s_def in known_keys.items():
+        if s_def["type"] == "bool":
+            value = "true" if request.form.get(key) == "true" else "false"
+        else:
+            value = request.form.get(key, "").strip()
+        AppSetting.set(key, value, s_def["description"])
+    db.session.commit()
+    log_action("app_settings_bulk_updated", details={"keys": list(known_keys.keys())})
+    flash("Settings saved.", "success")
+    return redirect(url_for("admin.settings"))
+
+
+@bp.route("/settings/delete", methods=["POST"])
+def settings_delete():
+    key = (request.form.get("key") or "").strip()
+    if not key:
+        flash("No key provided.", "warning")
+        return redirect(url_for("admin.settings"))
+    row = AppSetting.query.filter_by(key=key).first()
+    if row:
+        db.session.delete(row)
+        db.session.commit()
+        log_action("app_setting_deleted", details={"key": key})
+        flash(f"Setting '{key}' deleted.", "success")
     return redirect(url_for("admin.settings"))
 
 
