@@ -301,9 +301,24 @@ def run_import_job(job_id: int) -> None:
                 if _geo_candidates:
                     logger.warning("Geocoding failed for apartment %s (tried: %r)", apt.id, _geo_candidates)
 
-        # Download images (only for new apartments to avoid blowing up storage on refresh)
+        # For new apartments: download all images.
+        # For refreshes: only download URLs not already saved, so new photos
+        # added by the seller (including floor plans added later) are picked up.
         if new_apartment:
             _download_images(apt.id, result.image_urls)
+        elif result.image_urls:
+            already_saved = {
+                img.original_url
+                for img in ApartmentImage.query.filter_by(apartment_id=apt.id).all()
+                if img.original_url
+            }
+            new_urls = [u for u in result.image_urls if u not in already_saved]
+            if new_urls:
+                logger.info(
+                    "Refresh: downloading %d new image(s) for apartment %s",
+                    len(new_urls), apt.id,
+                )
+                _download_images(apt.id, new_urls)
 
         db.session.flush()  # ensure images present for warning rules
 
