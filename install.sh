@@ -474,7 +474,14 @@ update_app() {
         FLASK_APP=wsgi:app set -a && . '$ENV_FILE' && set +a && \
         '$INSTALL_DIR/venv/bin/flask' backfill-owner-id 2>/dev/null || true && \
         '$INSTALL_DIR/venv/bin/flask' backfill-targets 2>/dev/null || true"
-    ensure_ollama_model
+    if command -v ollama >/dev/null 2>&1; then
+        ensure_ollama_model
+    else
+        log_info "Ollama (AI field extraction) is not installed on this server."
+        if confirm "Install Ollama now? (downloads ~2 GB model on first use)" "N"; then
+            install_ollama
+        fi
+    fi
     setup_systemd
     setup_nginx
     start_services
