@@ -83,14 +83,45 @@ def delete_import_job_task(import_job_id: int) -> None:
         db.session.commit()
 
 
+LLM_QUEUE_MAX = 3   # max pending LLM enhance jobs; extras are silently dropped
+
+
 def enqueue_llm_enhance(apartment_id: int) -> None:
-    """Enqueue a non-blocking LLM enhancement job for an apartment."""
+    """Enqueue a non-blocking LLM enhancement job for an apartment.
+
+    Uses a deterministic job ID so the same apartment can never have two
+    LLM jobs queued simultaneously.  Also caps total pending LLM jobs at
+    LLM_QUEUE_MAX so a burst of imports doesn't create an unbounded backlog.
+    """
     try:
-        q = _get_queue()
+        redis = Redis.from_url(current_app.config["REDIS_URL"])
+        q = Queue(QUEUE_NAME, connection=redis)
+        job_id = f"llm-enhance-{apartment_id}"
+
+        # Skip if a job for this apartment is already queued or running
+        from rq.job import Job as _Job
+        try:
+            existing = _Job.fetch(job_id, connection=redis)
+            if existing.get_status() in ("queued", "started"):
+                logger.debug("LLM enhance already pending for apartment %s", apartment_id)
+                return
+        except Exception:
+            pass  # job doesn't exist → proceed
+
+        # Cap total pending LLM jobs (job IDs use our deterministic prefix)
+        pending = sum(1 for jid in q.job_ids if jid.startswith("llm-enhance-"))
+        if pending >= LLM_QUEUE_MAX:
+            logger.info(
+                "LLM queue has %d pending jobs (max %d) — skipping enhance for apartment %s",
+                pending, LLM_QUEUE_MAX, apartment_id,
+            )
+            return
+
         q.enqueue(
             "app.services.importer.jobs.llm_enhance_task",
             apartment_id,
-            job_timeout=120,
+            job_id=job_id,
+            job_timeout=75,
             result_ttl=0,
             failure_ttl=3600,
         )

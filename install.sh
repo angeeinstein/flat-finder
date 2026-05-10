@@ -101,7 +101,7 @@ install_certbot() {
 }
 
 # ---------- ollama ----------
-OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2:3b}"
+OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2:1b}"
 
 install_ollama() {
     log_step "Ollama (LLM for listing text extraction)"

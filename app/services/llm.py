@@ -19,9 +19,9 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-_TIMEOUT = 90           # seconds — runs async in its own RQ job, so a long wait is fine
+_TIMEOUT = 55           # seconds — 1b model on 2 CPUs finishes in ~25-35s; 55s gives headroom
 _DEFAULT_URL = "http://localhost:11434"
-_DEFAULT_MODEL = "llama3.2:3b"
+_DEFAULT_MODEL = "llama3.2:1b"   # 3× faster than 3b on CPU; still handles German + JSON well
 
 _PROMPT = """\
 You are a structured real-estate data extractor. Read the apartment listing and return a single JSON object. Use null for any field you are not confident about.
