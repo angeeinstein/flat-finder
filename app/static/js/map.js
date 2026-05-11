@@ -203,62 +203,66 @@
   // ---- Isochrone ----
   let isoLayer = null;
 
-  const isoWrap    = document.getElementById('isochrone-wrap');
-  const isoSlider  = document.getElementById('iso-minutes');
-  const isoOutput  = document.getElementById('iso-output');
-  const isoShow    = document.getElementById('iso-show');
-  const isoClear   = document.getElementById('iso-clear');
-  const isoStatus  = document.getElementById('iso-status');
+  const isoWrap   = document.getElementById('isochrone-wrap');
+  const isoSlider = document.getElementById('iso-minutes');
+  const isoOutput = document.getElementById('iso-output');
+  const isoShow   = document.getElementById('iso-show');
+  const isoClear  = document.getElementById('iso-clear');
+  const isoStatus = document.getElementById('iso-status');
 
-  isoSlider.addEventListener('input', () => {
-    isoOutput.textContent = isoSlider.value + ' min';
-  });
+  if (isoSlider) {
+    isoSlider.addEventListener('input', () => {
+      isoOutput.textContent = isoSlider.value + ' min';
+    });
+  }
 
   function clearIsochrone() {
     if (isoLayer) { map.removeLayer(isoLayer); isoLayer = null; }
-    isoStatus.style.display = 'none';
+    if (isoStatus) isoStatus.style.display = 'none';
   }
 
-  isoClear.addEventListener('click', clearIsochrone);
+  if (isoClear) isoClear.addEventListener('click', clearIsochrone);
 
-  isoShow.addEventListener('click', async () => {
-    const targetId = document.getElementById('target').value;
-    const mode     = document.getElementById('mode').value;
-    const target   = allTargets.find(t => String(t.id) === String(targetId));
-    if (!target || target.lat == null) {
-      isoStatus.textContent = 'Select a target first.';
+  if (isoShow) {
+    isoShow.addEventListener('click', async () => {
+      const targetId = document.getElementById('target').value;
+      const mode     = document.getElementById('mode').value;
+      const target   = allTargets.find(t => String(t.id) === String(targetId));
+      if (!target || target.lat == null) {
+        isoStatus.textContent = 'Select a target first.';
+        isoStatus.style.display = '';
+        return;
+      }
+      const minutes = parseInt(isoSlider.value, 10);
+      isoShow.disabled = true;
+      isoShow.textContent = '…';
+      isoStatus.textContent = 'Fetching isochrone…';
       isoStatus.style.display = '';
-      return;
-    }
-    const minutes = parseInt(isoSlider.value, 10);
-    isoShow.disabled = true;
-    isoShow.textContent = '…';
-    isoStatus.textContent = 'Fetching isochrone…';
-    isoStatus.style.display = '';
-    try {
-      const csrf = document.querySelector('meta[name="csrf-token"]').content;
-      const resp = await fetch('/api/isochrone', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-        body: JSON.stringify({ lat: target.lat, lng: target.lng, minutes, mode }),
-      });
-      const data = await resp.json();
-      if (data.error) { isoStatus.textContent = data.error; return; }
-      clearIsochrone();
-      isoLayer = L.geoJSON(data, {
-        style: {
-          color: '#0d6efd', weight: 2, opacity: .7,
-          fillColor: '#0d6efd', fillOpacity: .08,
-        },
-      }).addTo(map);
-      isoStatus.textContent = `${minutes} min reachable zone`;
-    } catch (e) {
-      isoStatus.textContent = 'Request failed.';
-    } finally {
-      isoShow.disabled = false;
-      isoShow.textContent = 'Show';
-    }
-  });
+      try {
+        const csrf = document.querySelector('meta[name="csrf-token"]').content;
+        const resp = await fetch('/api/isochrone', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+          body: JSON.stringify({ lat: target.lat, lng: target.lng, minutes, mode }),
+        });
+        const data = await resp.json();
+        if (data.error) { isoStatus.textContent = data.error; return; }
+        clearIsochrone();
+        isoLayer = L.geoJSON(data, {
+          style: {
+            color: '#0d6efd', weight: 2, opacity: .7,
+            fillColor: '#0d6efd', fillOpacity: .08,
+          },
+        }).addTo(map);
+        isoStatus.textContent = `${minutes} min reachable zone`;
+      } catch (e) {
+        isoStatus.textContent = 'Request failed.';
+      } finally {
+        isoShow.disabled = false;
+        isoShow.textContent = 'Show';
+      }
+    });
+  }
 
   // ---- Load from API (fired when target/mode changes) ----
   async function load() {
@@ -339,12 +343,20 @@
     renderMarkers();
   });
 
-  // Sidebar toggle
-  const sidebar = document.getElementById('map-sidebar');
-  document.getElementById('filter-toggle').addEventListener('click', () => {
-    sidebar.classList.toggle('collapsed');
+  // Sidebar toggle — button lives in the toolbar; icon flips to signal state
+  const sidebar    = document.getElementById('map-sidebar');
+  const filterBtn  = document.getElementById('filter-toggle');
+  function setSidebarOpen(open) {
+    sidebar.classList.toggle('collapsed', !open);
+    if (filterBtn) {
+      filterBtn.querySelector('i').className = open ? 'bi bi-x-lg' : 'bi bi-sliders';
+      filterBtn.title = open ? 'Hide filters' : 'Show filters';
+    }
     setTimeout(() => map.invalidateSize(), 220);
-  });
+  }
+  if (filterBtn) {
+    filterBtn.addEventListener('click', () => setSidebarOpen(sidebar.classList.contains('collapsed')));
+  }
 
   load();
 })();
