@@ -16,7 +16,7 @@
       {% for j in jobs %}
         <tr>
           <td class="small text-muted">{{ j.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-          <td class="small text-truncate" style="max-width:300px"><a href="{{ j.url }}" target="_blank">{{ j.url }}</a></td>
+          <td class="small text-truncate" style="max-width:300px"><a href="{{ j.url }}" target="_blank" rel="noopener noreferrer">{{ j.url }}</a></td>
           <td class="small">{{ j.error_message or '' }}</td>
           <td>
             <form method="post" action="{{ url_for('admin.failed_job_retry', job_id=j.id) }}" class="d-inline">

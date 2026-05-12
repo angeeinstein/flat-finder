@@ -13,15 +13,24 @@ from app.services.routing.base import RouteResult, RoutingProvider
 
 
 def get_provider() -> RoutingProvider:
-    name = (current_app.config.get("ROUTING_PROVIDER") or "mock").lower()
+    # Prefer AppSetting (set via Admin → Settings, editable without restart)
+    # over the env-var/config defaults — keeps a single source of truth.
+    from app.models.settings import AppSetting
+
+    name = (AppSetting.get("routing_provider")
+            or current_app.config.get("ROUTING_PROVIDER")
+            or "mock").lower()
     if name == "osrm":
         from app.services.routing.osrm import OSRMProvider
-        return OSRMProvider(base_url=current_app.config.get("OSRM_BASE_URL") or "")
+        base = (AppSetting.get("osrm_base_url")
+                or current_app.config.get("OSRM_BASE_URL")
+                or "").strip()
+        return OSRMProvider(base_url=base)
     if name in ("openrouteservice", "ors"):
         from app.services.routing.openrouteservice import OpenRouteServiceProvider
-        return OpenRouteServiceProvider(
-            api_key=current_app.config.get("OPENROUTESERVICE_API_KEY") or "",
-        )
+        api_key = ((AppSetting.get("openrouteservice_api_key") or "").strip()
+                   or current_app.config.get("OPENROUTESERVICE_API_KEY") or "")
+        return OpenRouteServiceProvider(api_key=api_key)
     from app.services.routing.mock import MockProvider
     return MockProvider()
 

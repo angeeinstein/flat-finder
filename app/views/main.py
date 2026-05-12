@@ -216,5 +216,13 @@ def switch_context():
             abort(403)
         session["active_team_id"] = team_id
 
-    next_url = request.referrer or url_for("main.dashboard")
+    # Validate referrer to prevent open redirect — Referer is client-controlled.
+    next_url = url_for("main.dashboard")
+    ref = request.referrer or ""
+    if ref:
+        from urllib.parse import urlparse
+        ref_parsed = urlparse(ref)
+        host_parsed = urlparse(request.host_url)
+        if ref_parsed.netloc == host_parsed.netloc:
+            next_url = ref
     return redirect(next_url)

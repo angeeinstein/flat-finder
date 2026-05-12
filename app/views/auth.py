@@ -15,13 +15,16 @@ bp = Blueprint("auth", __name__, template_folder="../templates")
 
 
 def _is_safe_url(target: str) -> bool:
+    """Only accept same-site relative paths.  Blocks //evil.com and absolute URLs."""
     if not target:
         return False
-    ref = urlparse(request.host_url)
-    test = urlparse(target if target.startswith("/") else target)
-    if test.netloc and test.netloc != ref.netloc:
+    if not target.startswith("/") or target.startswith("//"):
         return False
-    return target.startswith("/") and not target.startswith("//")
+    # Defense in depth: even though we required a leading "/", confirm urlparse
+    # agrees the target is host-less and same-origin if any host slipped in.
+    test = urlparse(target)
+    ref = urlparse(request.host_url)
+    return not test.netloc or test.netloc == ref.netloc
 
 
 @bp.route("/login", methods=["GET", "POST"])

@@ -35,8 +35,28 @@ def _load_env() -> None:
 _load_env()
 
 
+def _resolve_secret_key() -> str:
+    """Return FLASK_SECRET_KEY from env, or generate an ephemeral one.
+
+    An ephemeral key means every process restart invalidates all existing
+    sessions and cookies cannot be verified across gunicorn workers if they
+    were started before the env var was set.  We warn loudly so a misconfigured
+    production install is obvious.
+    """
+    key = os.environ.get("FLASK_SECRET_KEY")
+    if key:
+        return key
+    import logging
+    logging.getLogger(__name__).warning(
+        "FLASK_SECRET_KEY is not set — generating a random per-process key. "
+        "Sessions will be invalidated on every restart. "
+        "Set FLASK_SECRET_KEY in /etc/flat-finder/flat-finder.env for production."
+    )
+    return secrets.token_hex(32)
+
+
 class BaseConfig:
-    SECRET_KEY = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
+    SECRET_KEY = _resolve_secret_key()
 
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL", "postgresql://flatfinder:flatfinder@localhost:5432/flatfinder"

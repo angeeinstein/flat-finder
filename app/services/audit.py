@@ -20,7 +20,10 @@ def log_action(
 ) -> AuditLog:
     ip = None
     if has_request_context():
-        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        # request.remote_addr is already the real client IP because ProxyFix is
+        # configured in create_app(). Trusting X-Forwarded-For directly here
+        # would let any client inject an arbitrary value into the audit log.
+        ip = request.remote_addr
         if user_id is None:
             from flask_login import current_user
 

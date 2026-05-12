@@ -1,6 +1,7 @@
 """JSON API blueprint."""
 from __future__ import annotations
 
+import re
 from datetime import datetime
 
 from flask import Blueprint, abort, g, jsonify, request, url_for
@@ -122,16 +123,31 @@ def map_markers():
     return jsonify({"apartments": features, "targets": target_features, "color_by": color_by})
 
 
+def _check_image_access(image_id: int):
+    """Resolve an image and verify the caller can see its apartment.
+
+    Returns the ApartmentImage or aborts 404/403.  Used by the thumbnail
+    and full-size endpoints so authenticated users cannot enumerate images
+    belonging to other users/teams.
+    """
+    from app.models.listing import ApartmentImage
+    img = db.session.get(ApartmentImage, image_id)
+    if not img:
+        abort(404)
+    apt = db.session.get(Apartment, img.apartment_id)
+    if not apt:
+        abort(404)
+    g.ctx.check_apartment(apt)
+    return img
+
+
 @bp.route("/images/<int:image_id>/thumbnail")
 def image_thumbnail(image_id: int):
     """Serve a thumbnail. Tries thumbnail_path then local_path."""
     from pathlib import Path
     from flask import current_app, send_file
-    from app.models.listing import ApartmentImage
 
-    img = db.session.get(ApartmentImage, image_id)
-    if not img:
-        abort(404)
+    img = _check_image_access(image_id)
     # Prefer thumbnail
     for p in (img.thumbnail_path, img.local_path):
         if not p:
@@ -149,11 +165,8 @@ def image_full(image_id: int):
     """Serve the full-size original (used by the lightbox viewer)."""
     from pathlib import Path
     from flask import current_app, send_file
-    from app.models.listing import ApartmentImage
 
-    img = db.session.get(ApartmentImage, image_id)
-    if not img:
-        abort(404)
+    img = _check_image_access(image_id)
     for p in (img.local_path, img.thumbnail_path):
         if not p:
             continue
@@ -267,6 +280,9 @@ def set_status(apt_id: int):
 
 # -------------------- tags --------------------
 
+_HEX_COLOR_RE = re.compile(r"^#?[0-9A-Fa-f]{6}$")
+
+
 @bp.route("/apartments/<int:apt_id>/tags", methods=["POST"])
 def add_tag(apt_id: int):
     apt = db.session.get(Apartment, apt_id)
@@ -275,12 +291,20 @@ def add_tag(apt_id: int):
     g.ctx.check_apartment(apt)
     data = request.get_json(silent=True) or {}
     name = (data.get("name") or "").strip()
-    if not name:
-        return jsonify({"error": "name required"}), 400
+    if not name or len(name) > 64:
+        return jsonify({"error": "name required (max 64 chars)"}), 400
+    # Validate color — it ends up in a style="" attribute, so anything other
+    # than a hex value lets a tag-author inject CSS via this endpoint.
+    raw_color = (data.get("color") or "").strip()
+    if raw_color and not _HEX_COLOR_RE.match(raw_color):
+        return jsonify({"error": "color must be a hex code like #1a2b3c"}), 400
+    color = raw_color if raw_color else "#6c757d"
+    if not color.startswith("#"):
+        color = "#" + color
     slug = name.lower().replace(" ", "-")
     tag = Tag.query.filter_by(slug=slug).first()
     if not tag:
-        tag = Tag(name=name, slug=slug, color=data.get("color") or "#6c757d")
+        tag = Tag(name=name, slug=slug, color=color)
         db.session.add(tag)
         db.session.flush()
     if tag not in apt.tags:
@@ -423,9 +447,14 @@ def isochrone():
     """Proxy an isochrone request to OpenRouteService (keeps API key server-side)."""
     import requests as _req
     data = request.get_json(silent=True) or {}
-    lat = data.get("lat")
-    lng = data.get("lng")
-    minutes = max(5, min(int(data.get("minutes", 30)), 120))
+    try:
+        lat = float(data.get("lat"))
+        lng = float(data.get("lng"))
+        if not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
+            raise ValueError("lat/lng out of range")
+        minutes = max(5, min(int(data.get("minutes", 30)), 120))
+    except (TypeError, ValueError):
+        return jsonify({"error": "lat, lng, and minutes must be numeric (lat ±90, lng ±180)."}), 400
     mode = data.get("mode", "walking")
 
     from app.models.settings import AppSetting

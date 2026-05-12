@@ -383,6 +383,20 @@ def export_csv():
     ).all():
         statuses_by_apt[s.apartment_id] = s.status.value
 
+    def _csv_safe(val) -> str:
+        """Prevent CSV/spreadsheet formula injection (CWE-1236).
+
+        Cells starting with =, +, -, @, tab or CR are interpreted as
+        formulas by Excel/LibreOffice/Numbers.  Prefix with a single quote
+        so the cell is rendered as plain text.
+        """
+        if val is None:
+            return ""
+        s = str(val)
+        if s and s[0] in ("=", "+", "-", "@", "\t", "\r"):
+            return "'" + s
+        return s
+
     si = StringIO()
     w = csv.writer(si)
 
@@ -402,16 +416,16 @@ def export_csv():
         my_ratings = ratings_by_apt.get(apt.id, {})
 
         row = [
-            apt.title or f"Apartment #{apt.id}",
-            url,
-            apt.address or "",
-            apt.city or "",
+            _csv_safe(apt.title or f"Apartment #{apt.id}"),
+            _csv_safe(url),
+            _csv_safe(apt.address or ""),
+            _csv_safe(apt.city or ""),
             f"{price:.0f}" if price is not None else "",
             str(apt.rooms) if apt.rooms is not None else "",
             str(apt.living_area_m2) if apt.living_area_m2 is not None else "",
-            status,
+            _csv_safe(status),
             f"{score:.1f}" if score is not None else "",
-            notes_text,
+            _csv_safe(notes_text),
         ]
         for cat in categories:
             r = my_ratings.get(cat.id)

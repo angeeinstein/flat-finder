@@ -70,7 +70,7 @@
           {% endfor %}
         </tr>
         <tr><th>Sources</th>{% for a in apartments %}<td class="small">
-          {% for s in a.listing_sources %}<a href="{{ s.url }}" target="_blank">{{ s.platform or 'link' }}</a><br>{% endfor %}
+          {% for s in a.listing_sources %}<a href="{{ s.url }}" target="_blank" rel="noopener noreferrer">{{ s.platform or 'link' }}</a><br>{% endfor %}
         </td>{% endfor %}</tr>
       </tbody>
     </table>
