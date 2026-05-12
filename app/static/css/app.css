@@ -309,7 +309,8 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--ff-border);
   border-radius: var(--bs-border-radius-lg);
   padding: .9rem;
-  overflow: hidden;    /* always hidden so content clips during transition */
+  overflow-x: hidden;  /* clips content as width shrinks during collapse */
+  overflow-y: auto;    /* scroll when content exceeds sidebar height */
   transition: width .22s ease, padding .22s ease, opacity .15s ease, border-width .22s ease;
 }
 .map-sidebar.collapsed {

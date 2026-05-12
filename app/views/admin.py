@@ -329,6 +329,14 @@ KNOWN_SETTINGS: list[dict] = [
         "default": "false",
     },
     {
+        "key": "default_transport_mode",
+        "label": "Default transport mode",
+        "description": "Pre-selected travel mode on the map page.",
+        "type": "select",
+        "options": [("car", "Car"), ("walking", "Walking"), ("bicycle", "Bicycle"), ("transit", "Transit")],
+        "default": "car",
+    },
+    {
         "key": "routing_provider",
         "label": "Routing provider",
         "description": "Backend used for travel-time calculations.",
