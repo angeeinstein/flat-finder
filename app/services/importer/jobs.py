@@ -83,15 +83,16 @@ def delete_import_job_task(import_job_id: int) -> None:
         db.session.commit()
 
 
-LLM_QUEUE_MAX = 3   # max pending LLM enhance jobs; extras are silently dropped
+LLM_TTL_MINUTES_DEFAULT = 30   # jobs older than this are dropped from the queue
 
 
 def enqueue_llm_enhance(apartment_id: int) -> None:
     """Enqueue a non-blocking LLM enhancement job for an apartment.
 
-    Uses a deterministic job ID so the same apartment can never have two
-    LLM jobs queued simultaneously.  Also caps total pending LLM jobs at
-    LLM_QUEUE_MAX so a burst of imports doesn't create an unbounded backlog.
+    Uses a deterministic job ID (one job per apartment at a time) and an RQ
+    TTL so that jobs automatically expire when there is a backlog.  When the
+    queue is short jobs run immediately and TTL never triggers; when many
+    imports arrive at once old jobs expire and only fresh ones are executed.
     """
     try:
         from app.models.settings import AppSetting
@@ -101,6 +102,7 @@ def enqueue_llm_enhance(apartment_id: int) -> None:
     except Exception:
         pass
     try:
+        from app.models.settings import AppSetting
         redis = Redis.from_url(current_app.config["REDIS_URL"])
         q = Queue(QUEUE_NAME, connection=redis)
         job_id = f"llm-enhance-{apartment_id}"
@@ -115,20 +117,19 @@ def enqueue_llm_enhance(apartment_id: int) -> None:
         except Exception:
             pass  # job doesn't exist → proceed
 
-        # Cap total pending LLM jobs (job IDs use our deterministic prefix)
-        pending = sum(1 for jid in q.job_ids if jid.startswith("llm-enhance-"))
-        if pending >= LLM_QUEUE_MAX:
-            logger.info(
-                "LLM queue has %d pending jobs (max %d) — skipping enhance for apartment %s",
-                pending, LLM_QUEUE_MAX, apartment_id,
-            )
-            return
+        # TTL: if the job hasn't started within this window it's silently dropped.
+        # Keeps the queue lean when imports come in faster than the AI can process.
+        try:
+            ttl_minutes = int(AppSetting.get("llm_job_ttl_minutes") or LLM_TTL_MINUTES_DEFAULT)
+        except Exception:
+            ttl_minutes = LLM_TTL_MINUTES_DEFAULT
 
         q.enqueue(
             "app.services.importer.jobs.llm_enhance_task",
             apartment_id,
             job_id=job_id,
             job_timeout=75,
+            ttl=ttl_minutes * 60,
             result_ttl=0,
             failure_ttl=3600,
         )

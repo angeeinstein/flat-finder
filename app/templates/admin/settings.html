@@ -31,6 +31,13 @@
           {% elif s.type == 'number' %}
             <input type="number" class="form-control" id="setting_{{ s.key }}"
                    name="{{ s.key }}" value="{{ s.value }}">
+          {% elif s.type == 'password' %}
+            <input type="password" class="form-control" id="setting_{{ s.key }}"
+                   name="{{ s.key }}" value="{{ s.value }}" autocomplete="off"
+                   {% if s.test_endpoint %}data-test-url="{{ url_for('admin.' ~ s.test_endpoint) }}"{% endif %}>
+            {% if s.test_endpoint %}
+            <div id="test-result-{{ s.key }}" class="small mt-1"></div>
+            {% endif %}
           {% else %}
             <input type="text" class="form-control" id="setting_{{ s.key }}"
                    name="{{ s.key }}" value="{{ s.value }}">
@@ -86,4 +93,49 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+  const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+  document.querySelectorAll('input[data-test-url]').forEach(input => {
+    const resultEl = document.getElementById('test-result-' + input.name);
+    if (!resultEl) return;
+    let timer = null;
+
+    function runTest() {
+      const key = input.value.trim();
+      if (!key) { resultEl.textContent = ''; return; }
+      resultEl.className = 'small mt-1 text-muted';
+      resultEl.textContent = 'Testing…';
+      fetch(input.dataset.testUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        body: JSON.stringify({ api_key: key }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          resultEl.className = 'small mt-1 ' + (data.ok ? 'text-success' : 'text-danger');
+          resultEl.textContent = (data.ok ? '✓ ' : '✗ ') + data.message;
+        })
+        .catch(() => {
+          resultEl.className = 'small mt-1 text-danger';
+          resultEl.textContent = '✗ Request failed.';
+        });
+    }
+
+    input.addEventListener('input', () => {
+      clearTimeout(timer);
+      resultEl.textContent = '';
+      timer = setTimeout(runTest, 1500);
+    });
+
+    // Also fire immediately on blur if user tabs/clicks away
+    input.addEventListener('change', () => { clearTimeout(timer); runTest(); });
+  });
+})();
+</script>
 {% endblock %}

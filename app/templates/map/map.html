@@ -11,11 +11,11 @@
 {# ---- top controls bar ---- #}
 <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
   <h1 class="h4 mb-0"><i class="bi bi-map"></i> Map</h1>
+  <button class="btn btn-outline-secondary btn-sm" id="filter-toggle" title="Hide filters">
+    <i class="bi bi-x-lg"></i> Filters
+    <span class="badge bg-primary ms-1 d-none" id="filter-badge">0</span>
+  </button>
   <div class="ms-auto d-flex gap-2 flex-wrap align-items-center">
-    <button class="btn btn-outline-secondary btn-sm" id="filter-toggle" title="Hide filters">
-      <i class="bi bi-x-lg"></i> Filters
-      <span class="badge bg-primary ms-1 d-none" id="filter-badge">0</span>
-    </button>
     <select id="color-by" class="form-select form-select-sm" style="width:170px">
       <option value="score">Color: score</option>
       <option value="price">Color: price</option>

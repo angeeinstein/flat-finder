@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.extensions import db
@@ -346,9 +346,17 @@ KNOWN_SETTINGS: list[dict] = [
     {
         "key": "openrouteservice_api_key",
         "label": "OpenRouteService API key",
-        "description": "API key for openrouteservice.org (only used when routing provider is OpenRouteService).",
-        "type": "text",
+        "description": "API key for openrouteservice.org — used for travel-time routing and map isochrones. Free tier at openrouteservice.org.",
+        "type": "password",
         "default": "",
+        "test_endpoint": "test_ors_key",
+    },
+    {
+        "key": "llm_job_ttl_minutes",
+        "label": "AI job expiry (minutes)",
+        "description": "How long an AI job can wait in the queue before being discarded. Short queues process everything; during a burst of imports, only jobs newer than this are processed.",
+        "type": "number",
+        "default": "30",
     },
 ]
 
@@ -407,6 +415,32 @@ def settings_delete():
         log_action("app_setting_deleted", details={"key": key})
         flash(f"Setting '{key}' deleted.", "success")
     return redirect(url_for("admin.settings"))
+
+
+@bp.route("/settings/test-ors-key", methods=["POST"])
+def test_ors_key():
+    """Test an OpenRouteService API key without saving it."""
+    import requests as _req
+    data = request.get_json(silent=True) or {}
+    api_key = (data.get("api_key") or "").strip()
+    if not api_key:
+        return jsonify({"ok": False, "message": "Enter a key first."})
+    try:
+        resp = _req.post(
+            "https://api.openrouteservice.org/v2/isochrones/foot-walking",
+            headers={"Authorization": api_key, "Content-Type": "application/json"},
+            json={"locations": [[16.37, 48.21]], "range": [300], "range_type": "time"},
+            timeout=8,
+        )
+        if resp.status_code == 200:
+            return jsonify({"ok": True, "message": "Key is valid."})
+        if resp.status_code == 401:
+            return jsonify({"ok": False, "message": "Rejected by ORS (401 — invalid key)."})
+        return jsonify({"ok": False, "message": f"Unexpected ORS response: HTTP {resp.status_code}."})
+    except _req.exceptions.Timeout:
+        return jsonify({"ok": False, "message": "ORS did not respond in time."})
+    except Exception as exc:
+        return jsonify({"ok": False, "message": str(exc)})
 
 
 # -------------------- audit log --------------------

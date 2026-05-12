@@ -428,9 +428,10 @@ def isochrone():
     minutes = max(5, min(int(data.get("minutes", 30)), 120))
     mode = data.get("mode", "walking")
 
-    api_key = current_app.config.get("OPENROUTESERVICE_API_KEY", "")
+    from app.models.settings import AppSetting
+    api_key = (AppSetting.get("openrouteservice_api_key") or "").strip()
     if not api_key:
-        return jsonify({"error": "Set OPENROUTESERVICE_API_KEY in your .env to use isochrones."}), 503
+        return jsonify({"error": "No OpenRouteService API key configured. Go to Admin → Settings and add key 'openrouteservice_api_key'."}), 503
 
     profile_map = {
         "walking": "foot-walking",
@@ -446,10 +447,14 @@ def isochrone():
             json={"locations": [[lng, lat]], "range": [minutes * 60], "range_type": "time"},
             timeout=10,
         )
+        if resp.status_code == 401:
+            return jsonify({"error": "ORS API key rejected (401). Check Admin → Settings key 'openrouteservice_api_key'."}), 502
         resp.raise_for_status()
         return jsonify(resp.json())
+    except _req.exceptions.Timeout:
+        return jsonify({"error": "OpenRouteService request timed out."}), 502
     except Exception as exc:
-        return jsonify({"error": str(exc)}), 502
+        return jsonify({"error": f"ORS error: {exc}"}), 502
 
 
 @bp.route("/rq-status/<path:job_id>")

@@ -286,6 +286,8 @@
     if (targetId) {
       travelWrap.style.display = '';
       if (isoWrap) isoWrap.style.display = '';
+      // Auto-expand the sidebar so the user can see the new controls
+      if (sidebar && sidebar.classList.contains('collapsed')) setSidebarOpen(true);
     } else {
       travelWrap.style.display = 'none';
       document.getElementById('f-max-travel').value = 0;

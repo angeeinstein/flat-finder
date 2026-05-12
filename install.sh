@@ -157,6 +157,8 @@ install_ollama() {
         ollama pull "${OLLAMA_MODEL}"
         log_ok "Model ${OLLAMA_MODEL} ready."
     fi
+
+    configure_ollama_priority
 }
 
 ensure_ollama_model() {
@@ -169,6 +171,46 @@ ensure_ollama_model() {
     if ! ollama list 2>/dev/null | grep -q "^${OLLAMA_MODEL}"; then
         log_info "Pulling Ollama model ${OLLAMA_MODEL}..."
         ollama pull "${OLLAMA_MODEL}" || log_warn "Model pull failed — run 'ollama pull ${OLLAMA_MODEL}' manually."
+    fi
+}
+
+configure_ollama_priority() {
+    # Limit how much CPU Ollama can consume so the web server stays responsive.
+    #
+    # Nice=10  — always works in LXC; Ollama yields immediately whenever any
+    #            other process (web server, worker) needs the CPU.
+    # CPUQuota — hard ceiling via cgroup v2.  Requires the 'cpu' controller to
+    #            be delegated to this container.  We probe for it and fall back
+    #            gracefully if it is absent.
+    command -v ollama >/dev/null 2>&1 || return 0
+
+    local dropin_dir="/etc/systemd/system/ollama.service.d"
+    local dropin="${dropin_dir}/flat-finder.conf"
+    mkdir -p "$dropin_dir"
+
+    # Probe: does this container have a writable cgroup v2 cpu controller?
+    local cpu_quota_line=""
+    if grep -qw cpu /sys/fs/cgroup/cgroup.controllers 2>/dev/null; then
+        cpu_quota_line="CPUQuota=90%"
+    fi
+
+    # Write drop-in (with or without CPUQuota)
+    printf '[Service]\nNice=10\n%s\n' "$cpu_quota_line" > "$dropin"
+
+    systemctl daemon-reload
+
+    # Verify Ollama still starts cleanly; if not, strip CPUQuota and retry
+    if ! systemctl restart ollama --no-block 2>/dev/null; then
+        log_warn "Ollama did not restart cleanly with CPUQuota — falling back to Nice=10 only."
+        printf '[Service]\nNice=10\n' > "$dropin"
+        systemctl daemon-reload
+        systemctl restart ollama --no-block 2>/dev/null || true
+    fi
+
+    if [[ -n "$cpu_quota_line" ]]; then
+        log_ok "Ollama CPU priority: Nice=10 + CPUQuota=90%."
+    else
+        log_ok "Ollama CPU priority: Nice=10 (cgroup v2 cpu controller not available in this container)."
     fi
 }
 
@@ -556,10 +598,11 @@ update_app() {
     run_flask_cmd "backfill-targets"  2>/dev/null || true
     if command -v ollama >/dev/null 2>&1; then
         ensure_ollama_model
+        configure_ollama_priority
     else
         log_info "Ollama (AI field extraction) is not installed on this server."
         if confirm "Install Ollama now? (downloads ~2 GB model on first use)" "N"; then
-            install_ollama
+            install_ollama  # configure_ollama_priority called inside
         fi
     fi
     setup_systemd
@@ -617,6 +660,7 @@ repair_install() {
             run_flask_cmd "backfill-owner-id" 2>/dev/null || true
             run_flask_cmd "backfill-targets"  2>/dev/null || true
             ensure_ollama_model
+            configure_ollama_priority
             setup_systemd
             start_services
             setup_nginx
