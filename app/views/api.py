@@ -437,9 +437,10 @@ def isochrone():
         "walking": "foot-walking",
         "bicycle": "cycling-regular",
         "car":     "driving-car",
-        "transit": "foot-walking",
     }
-    profile = profile_map.get(mode, "foot-walking")
+    if mode not in profile_map:
+        return jsonify({"error": "Isochrones are not available for transit — OpenRouteService has no public transport profile. Switch the mode to Car, Walking, or Bicycle."}), 422
+    profile = profile_map[mode]
     try:
         resp = _req.post(
             f"https://api.openrouteservice.org/v2/isochrones/{profile}",
