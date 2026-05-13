@@ -7,6 +7,7 @@ the authoritative source for images, attributes, address, and description.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from typing import Any
 from urllib.parse import urljoin, urlparse
@@ -15,6 +16,9 @@ from bs4 import BeautifulSoup
 
 from app.services.importer.generic import GenericImporter, _looks_like_property_image
 from app.services.importer.base import ImporterResult
+
+
+logger = logging.getLogger(__name__)
 
 
 WILLHABEN_HOSTS = ("www.willhaben.at", "willhaben.at")
@@ -213,6 +217,16 @@ class WillhabenImporter(GenericImporter):
         attrs = self._collect_willhaben_attrs(data)
         if not attrs:
             return
+
+        # Log all price/rent-related attribute keys so we can identify the
+        # correct field names from real willhaben responses (INFO level so it
+        # appears in default log output without enabling DEBUG).
+        price_attrs = {k: v for k, v in attrs.items()
+                       if any(kw in k.upper() for kw in (
+                           "PRICE", "RENT", "COST", "FEE", "DEPOSIT",
+                           "MIETE", "BELASTUNG", "KOSTEN", "STEUER",
+                       ))}
+        logger.info("Willhaben price-related attributes: %s", price_attrs)
 
         def first(*keys: str) -> str | None:
             for k in keys:
