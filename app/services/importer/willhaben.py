@@ -304,12 +304,45 @@ class WillhabenImporter(GenericImporter):
             except ValueError:
                 pass
 
-        # ---- Operating costs ----
+        # ---- Rent breakdown ----
+        # Net rent (Nettomiete) — the base rent before VAT and ancillary costs.
+        # Override whatever the generic extractor guessed from JSON-LD (which is
+        # usually Gesamtmiete inkl. MWSt, causing double-counting when added to
+        # operating_costs).
+        rent_net_raw = first(
+            "RENTAL_PRICE/RENT_NET",
+            "RENT_NET",
+            "PRICE_NET",
+        )
+        if rent_net_raw:
+            try:
+                result.fields["price"] = float(rent_net_raw.replace(".", "").replace(",", "."))
+            except ValueError:
+                pass
+
+        # Operating costs ----
         opex_raw = first("RENTAL_PRICE/ADDITIONAL_COST_NET", "RENTAL_PRICE/ADDITIONAL_COSTS_NET")
         if opex_raw:
             try:
                 result.fields.setdefault(
                     "operating_costs", float(opex_raw.replace(".", "").replace(",", "."))
+                )
+            except ValueError:
+                pass
+
+        # Gesamtbelastung (total monthly burden, inc. all costs and VAT).
+        # Set as total_monthly_cost so computed_total_monthly_cost uses it
+        # directly instead of naively summing price + operating_costs.
+        total_gross_raw = first(
+            "RENTAL_PRICE/TOTAL_RENT_GROSS",
+            "TOTAL_RENT_GROSS",
+            "RENTAL_PRICE/GROSS_RENT",
+            "GROSS_RENT",
+        )
+        if total_gross_raw:
+            try:
+                result.fields["total_monthly_cost"] = float(
+                    total_gross_raw.replace(".", "").replace(",", ".")
                 )
             except ValueError:
                 pass
