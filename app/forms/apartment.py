@@ -59,6 +59,7 @@ class ApartmentForm(FlaskForm):
 
     price = DecimalField("Rent (€/month)", validators=[Optional(), NumberRange(min=0)], places=2)
     operating_costs = DecimalField("Operating costs (€/month)", validators=[Optional(), NumberRange(min=0)], places=2)
+    heating_costs = DecimalField("Heating costs (€/month)", validators=[Optional(), NumberRange(min=0)], places=2)
     total_monthly_cost = DecimalField("Total monthly cost (€)", validators=[Optional(), NumberRange(min=0)], places=2)
     deposit = DecimalField("Deposit (€)", validators=[Optional(), NumberRange(min=0)], places=2)
     commission = DecimalField("Commission (€)", validators=[Optional(), NumberRange(min=0)], places=2)

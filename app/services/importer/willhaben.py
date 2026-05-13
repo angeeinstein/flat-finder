@@ -226,7 +226,7 @@ class WillhabenImporter(GenericImporter):
                            "PRICE", "RENT", "COST", "FEE", "DEPOSIT",
                            "MIETE", "BELASTUNG", "KOSTEN", "STEUER",
                        ))}
-        logger.info("Willhaben price-related attributes: %s", price_attrs)
+        logger.debug("Willhaben price-related attributes: %s", price_attrs)
 
         def first(*keys: str) -> str | None:
             for k in keys:
@@ -314,50 +314,39 @@ class WillhabenImporter(GenericImporter):
         deposit_raw = first("ADDITIONAL_COST/DEPOSIT")
         if deposit_raw:
             try:
-                result.fields.setdefault("deposit", float(deposit_raw.replace(",", ".")))
+                result.fields.setdefault(
+                    "deposit", float(deposit_raw.replace(".", "").replace(",", "."))
+                )
             except ValueError:
                 pass
 
         # ---- Rent breakdown ----
-        # Net rent (Nettomiete) — the base rent before VAT and ancillary costs.
-        # Override whatever the generic extractor guessed from JSON-LD (which is
-        # usually Gesamtmiete inkl. MWSt, causing double-counting when added to
-        # operating_costs).
-        rent_net_raw = first(
-            "RENTAL_PRICE/RENT_NET",
-            "RENT_NET",
-            "PRICE_NET",
-        )
-        if rent_net_raw:
-            try:
-                result.fields["price"] = float(rent_net_raw.replace(".", "").replace(",", "."))
-            except ValueError:
-                pass
+        def _de_float(s: str) -> float:
+            return float(s.replace(".", "").replace(",", "."))
 
-        # Operating costs ----
+        # Betriebskosten (operating costs, excl. VAT)
         opex_raw = first("RENTAL_PRICE/ADDITIONAL_COST_NET", "RENTAL_PRICE/ADDITIONAL_COSTS_NET")
         if opex_raw:
             try:
-                result.fields.setdefault(
-                    "operating_costs", float(opex_raw.replace(".", "").replace(",", "."))
-                )
+                result.fields.setdefault("operating_costs", _de_float(opex_raw))
             except ValueError:
                 pass
 
-        # Gesamtbelastung (total monthly burden, inc. all costs and VAT).
-        # Set as total_monthly_cost so computed_total_monthly_cost uses it
-        # directly instead of naively summing price + operating_costs.
-        total_gross_raw = first(
-            "RENTAL_PRICE/TOTAL_RENT_GROSS",
-            "TOTAL_RENT_GROSS",
-            "RENTAL_PRICE/GROSS_RENT",
-            "GROSS_RENT",
-        )
-        if total_gross_raw:
+        # Heizkosten (heating costs, excl. VAT)
+        heat_raw = first("RENTAL_PRICE/HEATINGCOSTSNET")
+        if heat_raw:
             try:
-                result.fields["total_monthly_cost"] = float(
-                    total_gross_raw.replace(".", "").replace(",", ".")
-                )
+                result.fields.setdefault("heating_costs", _de_float(heat_raw))
+            except ValueError:
+                pass
+
+        # Gesamtbelastung (total monthly burden incl. all costs and VAT).
+        # Stored directly as total_monthly_cost so computed_total_monthly_cost
+        # returns it as-is instead of naively summing price + operating_costs.
+        total_raw = first("RENTAL_PRICE/TOTAL_ENCUMBRANCE")
+        if total_raw:
+            try:
+                result.fields["total_monthly_cost"] = _de_float(total_raw)
             except ValueError:
                 pass
 

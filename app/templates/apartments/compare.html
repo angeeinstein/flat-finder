@@ -31,6 +31,8 @@
       <tbody>
         <tr><th>Address</th>{% for a in apartments %}<td>{{ a.address or '–' }}</td>{% endfor %}</tr>
         <tr><th>Price</th>{% for a in apartments %}<td>{{ '€%.0f'|format(a.price) if a.price else '–' }}</td>{% endfor %}</tr>
+        <tr><th>Operating costs</th>{% for a in apartments %}<td>{{ '€%.2f'|format(a.operating_costs) if a.operating_costs else '–' }}</td>{% endfor %}</tr>
+        <tr><th>Heating costs</th>{% for a in apartments %}<td>{{ '€%.2f'|format(a.heating_costs) if a.heating_costs else '–' }}</td>{% endfor %}</tr>
         <tr><th>Total monthly</th>{% for a in apartments %}<td>{{ '€%.0f'|format(a.computed_total_monthly_cost) if a.computed_total_monthly_cost else '–' }}</td>{% endfor %}</tr>
         <tr><th>€ / m²</th>{% for a in apartments %}<td>{{ '€%.1f'|format(a.cost_per_m2) if a.cost_per_m2 else '–' }}</td>{% endfor %}</tr>
         <tr><th>Area</th>{% for a in apartments %}<td>{{ '%.0f m²'|format(a.living_area_m2) if a.living_area_m2 else '–' }}</td>{% endfor %}</tr>

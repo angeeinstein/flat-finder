@@ -212,6 +212,7 @@
             <tr><th>City / postal</th><td>{{ apt.city or '–' }} {{ apt.postal_code or '' }} {{ apt.country or '' }}</td></tr>
             <tr><th>Rent</th><td>{{ '€%.2f'|format(apt.price) if apt.price else '–' }}</td></tr>
             <tr><th>Operating costs</th><td>{{ '€%.2f'|format(apt.operating_costs) if apt.operating_costs else '–' }}</td></tr>
+            {% if apt.heating_costs %}<tr><th>Heating costs</th><td>{{ '€%.2f'|format(apt.heating_costs) }}</td></tr>{% endif %}
             <tr><th>Total monthly</th><td><strong>{{ '€%.2f'|format(apt.computed_total_monthly_cost) if apt.computed_total_monthly_cost else '–' }}</strong></td></tr>
             <tr><th>Commission</th><td>{{ '€%.2f'|format(apt.commission) if apt.commission else '–' }}</td></tr>
             <tr><th>Estimated yearly</th><td>{{ '€%.0f'|format(apt.estimated_yearly_cost) if apt.estimated_yearly_cost else '–' }}</td></tr>

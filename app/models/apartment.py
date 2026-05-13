@@ -26,6 +26,7 @@ class Apartment(db.Model):
     # Pricing
     price = db.Column(db.Numeric(10, 2), nullable=True)
     operating_costs = db.Column(db.Numeric(10, 2), nullable=True)
+    heating_costs = db.Column(db.Numeric(10, 2), nullable=True)
     total_monthly_cost = db.Column(db.Numeric(10, 2), nullable=True)
     deposit = db.Column(db.Numeric(10, 2), nullable=True)
     commission = db.Column(db.Numeric(10, 2), nullable=True)
@@ -181,7 +182,7 @@ class Apartment(db.Model):
     def computed_total_monthly_cost(self) -> float | None:
         if self.total_monthly_cost is not None:
             return float(self.total_monthly_cost)
-        parts = [self.price, self.operating_costs]
+        parts = [self.price, self.operating_costs, self.heating_costs]
         nums = [float(p) for p in parts if p is not None]
         return sum(nums) if nums else None
 
